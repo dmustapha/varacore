@@ -1,0 +1,11 @@
+constructor {
+  New : ();
+};
+
+service AgentConsumer {
+  SetVaracoreAddress : (pid: actor_id) -> result (null, str);
+  CheckAgentTrust : (agent_id: actor_id) -> result (u32, str);
+  FindOracleAgents : () -> result (u32, str);
+  query GetCachedScore : () -> u32;
+  query GetCachedDiscoveryCount : () -> u32;
+};

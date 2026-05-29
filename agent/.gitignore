@@ -1,0 +1,11 @@
+# Environment — never commit secrets
+.env
+.env.local
+
+# Node.js
+node_modules/
+dist/
+*.tsbuildinfo
+
+# macOS
+.DS_Store

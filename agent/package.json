@@ -1,0 +1,24 @@
+{
+  "name": "varacore-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "price-agent": "ts-node src/price-agent.ts",
+    "register-hub": "ts-node src/register-hub.ts",
+    "seed-interactions": "ts-node src/seed-interactions.ts",
+    "register-test-agents": "ts-node src/register-test-agents.ts"
+  },
+  "dependencies": {
+    "@gear-js/api": "0.44.0",
+    "@polkadot/api": "^12.0.0",
+    "@polkadot/keyring": "^12.0.0",
+    "@polkadot/util-crypto": "^12.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  }
+}
