@@ -22,6 +22,12 @@ dist/
 # macOS
 .DS_Store
 
+# Pipeline docs (local only)
+PULSE.md
+pipeline-log.md
+.conductor-resume.md
+*.backup
+
 # Local state
 .polish-state.json
 .conductor-state.json
