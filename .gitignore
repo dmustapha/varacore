@@ -31,6 +31,10 @@ dist/
 .stress-test-state.json
 .e2e-results.json
 .deploy-state.json
+.build-state.json
+.forge-state.json
+.critique-state.json
+.binpath
 intel-state.json
 config.json
 
