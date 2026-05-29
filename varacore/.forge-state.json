@@ -1,0 +1,243 @@
+{
+  "version": "1.1",
+  "hackathon_name": "Vara A2A Network — Agents Arena Season 1",
+  "project_name": "VaraCore",
+  "winning_idea": "VaraCore — 3-service agent trust infrastructure (OracleService + ReputationService + AgentRegistryService)",
+  "source": "warroom",
+  "status": "complete",
+  "current_phase": "complete",
+  "current_substep": null,
+  "current_session": 3,
+  "next_session_entry": null,
+  "phases_complete": ["phase-0", "phase-0b", "phase-1", "phase-1.5", "phase-2", "phase-2.5", "phase-3", "phase-3.5", "phase-4"],
+  "autonomous_mode": true,
+  "timestamps": {
+    "started": "2026-05-22T00:00:00Z",
+    "completed": "2026-05-22T12:00:00Z"
+  },
+  "documents": {
+    "prd": "/Users/MAC/vara-a2a/varacore/PRD.md",
+    "architecture": "/Users/MAC/vara-a2a/varacore/ARCHITECTURE.md",
+    "architecture_sections_complete": [
+      "system_overview", "workspace_cargo", "varacore_cargo", "build_rs",
+      "lib_rs", "oracle_rs", "reputation_rs", "registry_rs",
+      "price_consumer", "agent_consumer", "agent_package_json",
+      "price_agent_ts", "register_hub_ts", "seed_scripts",
+      "oracle_tests", "reputation_tests", "registry_tests",
+      "config_reference", "testing_strategy", "build_order",
+      "deployment_sequence", "addresses"
+    ],
+    "implementation_plan": "/Users/MAC/vara-a2a/varacore/PLAN.md",
+    "mini_verdict": null,
+    "deep_research": "/Users/MAC/vara-a2a/research/TECHNICAL-SPIKE.md",
+    "feature_observables": "/Users/MAC/vara-a2a/varacore/FEATURE-OBSERVABLES.md"
+  },
+  "quality_scores": {
+    "prd": {
+      "component_coverage": "PASS",
+      "flow_demo_alignment": "PASS",
+      "api_risk_coverage": "PASS",
+      "concern_compliance": "PASS",
+      "implementation_code_check": "PASS",
+      "risk_minimum": "PASS",
+      "overall": "PASS — 6/6"
+    },
+    "architecture": {
+      "file_coverage": "PASS",
+      "verification_tags": "PASS",
+      "pseudocode_check": "PASS",
+      "import_validity": "PASS",
+      "component_coverage": "PASS",
+      "file_path_headers": "PASS",
+      "overall": "PASS — 6/6"
+    },
+    "implementation_plan": {
+      "file_creation_coverage": "PASS",
+      "section_references": "PASS",
+      "decision_tree_coverage": "PASS",
+      "phase_gates": "PASS",
+      "commit_messages": "PASS",
+      "vague_instructions": "PASS",
+      "time_feasibility": "PASS",
+      "overall": "PASS — 7/7"
+    },
+    "cross_doc_audit": "PASS — 4/4 checks"
+  },
+  "corrections": [
+    "sails-rs version: TECHNICAL-SPIKE.md claimed 1.0.0; agent research found 0.10.4 in actual sails-rs examples repo — using 0.10.4",
+    "gtest version: TECHNICAL-SPIKE.md claimed 1.10.0; agent research found 1.8.1 in dev-dependencies — using 1.8.1",
+    "CLI tool: prior plans referenced vara-wallet CLI which does not exist; correct tool is gcli — all deploy commands use gcli",
+    "SCALE encoding for delayed messages: tagged [UNVERIFIED] — testnet validation required in Phase 3",
+    "Scope expanded: warroom user directive 2026-05-22 — all 3 services in one binary from Day 1"
+  ],
+  "tech_stack": {
+    "family": "Smart Contracts + Backend",
+    "languages": ["Rust", "TypeScript"],
+    "frameworks": ["sails-rs 0.10.4", "@gear-js/api 0.44.0", "gtest 1.8.1"],
+    "deploy_target": "Vara Network (mainnet + testnet)"
+  },
+  "technical_spike": {
+    "needed": true,
+    "spike_file": "/Users/MAC/vara-a2a/research/TECHNICAL-SPIKE.md",
+    "unknowns": [
+      "sails-rs version and encoding format",
+      "gtest version and API",
+      "deployment CLI name",
+      "SCALE encoding for delayed self-messages",
+      "Cross-program call payload format"
+    ],
+    "verified_patterns": [
+      "sails-rs 0.10.4 with SCALE string encoding — from sails-rs examples repo",
+      "gtest 1.8.1 dev-dependency — from sails-rs examples Cargo.toml",
+      "gcli for deployment — from gear-tech tooling docs",
+      "Multi-service #[program] pattern with RefCell — from DemoProgram in sails-rs repo",
+      "floor_log2 via leading_zeros() — standard Rust no_std pattern",
+      "@gear-js/api 0.44.0 GearApi.create() + api.message.send() — from @gear-js docs"
+    ],
+    "unverified_patterns": [
+      "SCALE encoding (service_name, method_name).encode() for delayed self-messages",
+      "Cross-program call payload: ('ServiceName', 'MethodName', args).encode()",
+      "Hub Catalog RegisterApplication payload format (skills_hash + idl_hash fields)"
+    ],
+    "assumed_patterns": [
+      "build.rs IDL generation pattern",
+      "gtest 1.8.1 Program::current(&sys) constructor"
+    ]
+  },
+  "project_type": "agent",
+  "project_type_rationale": "Rust Sails program + TypeScript autonomous price agent + delayed self-message loop",
+  "scope_mode": "standard",
+  "context_percentage": 72,
+  "session": 3,
+  "errors": [],
+  "phase_ledger": [
+    {
+      "phase": "phase-0",
+      "started_at": "2026-05-22T00:00:00Z",
+      "completed_at": "2026-05-22T00:30:00Z",
+      "evidence": "Loaded config.json, WINNER-BRIEF.md (3-service scope), TECHNICAL-SPIKE.md, concerns.md (4 Critical, 6 Important, 3 Advisory)"
+    },
+    {
+      "phase": "phase-0b",
+      "started_at": "2026-05-22T00:30:00Z",
+      "completed_at": "2026-05-22T02:00:00Z",
+      "evidence": "4 research agents dispatched; corrected sails-rs→0.10.4, gtest→1.8.1, vara-wallet→gcli; TECHNICAL-SPIKE.md annotated with corrections"
+    },
+    {
+      "phase": "phase-1",
+      "started_at": "2026-05-22T02:00:00Z",
+      "completed_at": "2026-05-22T04:00:00Z",
+      "evidence": "PRD.md written: 792 lines, 10 sections, 12 risks, 5 user flows, 5 demo scenes, 6 API contracts, concerns compliance table"
+    },
+    {
+      "phase": "phase-1.5",
+      "started_at": "2026-05-22T04:00:00Z",
+      "completed_at": "2026-05-22T04:05:00Z",
+      "evidence": "PRD quality gate: 6/6 PASS. Autonomous mode — no user pause required"
+    },
+    {
+      "phase": "phase-2",
+      "started_at": "2026-05-22T04:05:00Z",
+      "completed_at": "2026-05-22T08:00:00Z",
+      "evidence": "ARCHITECTURE.md written: 2603 lines, 22 sections, all 7 code files complete, 3 test files, deployment sequence with gcli commands"
+    },
+    {
+      "phase": "phase-2.5",
+      "started_at": "2026-05-22T08:00:00Z",
+      "completed_at": "2026-05-22T08:10:00Z",
+      "evidence": "Architecture quality gate: 6/6 PASS. Cross-doc audit: 4/4 checks PASS. Autonomous mode — no user pause required"
+    },
+    {
+      "phase": "phase-3",
+      "started_at": "2026-05-22T08:10:00Z",
+      "completed_at": "2026-05-22T11:00:00Z",
+      "evidence": "PLAN.md written: 1231 lines, 15 phases Days 11-21, 14 decision trees, commit message table, concerns traceability table"
+    },
+    {
+      "phase": "phase-3.5",
+      "started_at": "2026-05-22T11:00:00Z",
+      "completed_at": "2026-05-22T11:05:00Z",
+      "evidence": "Plan quality gate: 7/7 PASS. Cross-doc audit: 4/4 PASS. Autonomous mode — no user pause required"
+    },
+    {
+      "phase": "phase-4",
+      "started_at": "2026-05-22T11:05:00Z",
+      "completed_at": "2026-05-22T12:00:00Z",
+      "evidence": "FEATURE-OBSERVABLES.md: 9 observables (F-001 to F-009) for P0+P1 features. forge-state.json, conductor-state.json, pipeline-log.md, PULSE.md updated"
+    }
+  ],
+  "feature_observables": [
+    {
+      "feature_id": "F-001",
+      "feature": "Oracle stores and returns price data",
+      "observable": "GetPrice response has price > 0 after UpdatePrice is called",
+      "test_command": "gcli query $PROGRAM_ID --service OracleService --action GetPrice --args '{\"asset\":\"Vara\"}'",
+      "sentinel_fail": "price == 0 or null after UpdatePrice confirms",
+      "verified_by": "Phase 2 Gate + Phase 9 Gate"
+    },
+    {
+      "feature_id": "F-002",
+      "feature": "Oracle autonomous refresh loop runs",
+      "observable": "Program sends message to itself ~100 blocks after UpdatePrice — sender == receiver on subscan.io",
+      "test_command": "vara.subscan.io transaction check for self-referential message",
+      "sentinel_fail": "No self-message within 300 blocks of last UpdatePrice",
+      "verified_by": "Phase 3 Gate + Phase 10 Gate"
+    },
+    {
+      "feature_id": "F-003",
+      "feature": "Reputation score increases with interactions",
+      "observable": "GetScore > 0 after 5 successes; differs from value after 1 call",
+      "test_command": "gcli query $PROGRAM_ID --service ReputationService --action GetScore --args '{\"agent_id\":\"$AGENT\"}'",
+      "sentinel_fail": "score == 0 after recorded interactions",
+      "verified_by": "Phase 4 Gate + Phase 13 Gate"
+    },
+    {
+      "feature_id": "F-004",
+      "feature": "Registry returns agents by capability",
+      "observable": "FindByCapability returns non-empty list after registration with that capability",
+      "test_command": "gcli query $PROGRAM_ID --service AgentRegistryService --action FindByCapability --args '{\"capability\":\"price_feed\"}'",
+      "sentinel_fail": "Empty list after registered agent with capability",
+      "verified_by": "Phase 5 Gate + Phase 13 Gate"
+    },
+    {
+      "feature_id": "F-005",
+      "feature": "Cross-program call from PriceConsumer to OracleService",
+      "observable": "Transaction from PriceConsumer to VaraCore visible on subscan; PriceConsumer cached_price > 0",
+      "test_command": "gcli send $PRICE_CONSUMER_PID --service PriceConsumer --action FetchPriceFromOracle",
+      "sentinel_fail": "cached_price == 0 or no cross-program tx on explorer",
+      "verified_by": "Phase 9 Gate + Phase 12 Gate"
+    },
+    {
+      "feature_id": "F-006",
+      "feature": "TypeScript price agent writes live prices on-chain",
+      "observable": "VARA/USD price on-chain within 10% of CoinGecko spot price; not a hardcoded value",
+      "test_command": "ts-node src/price-agent.ts + compare with CoinGecko API",
+      "sentinel_fail": "Same price on every run regardless of market movement",
+      "verified_by": "Phase 8 Gate + Phase 9 Gate"
+    },
+    {
+      "feature_id": "F-007",
+      "feature": "Hub Catalog registration complete",
+      "observable": "VaraCore listing shows status=submitted in Hub Registry",
+      "test_command": "gcli query 0x19f27f4c906a5ac230be82d907850d44c7a7fff1b4c6903f62e78e09e0b353f3 --service HubCatalog --action GetApplication",
+      "sentinel_fail": "status != submitted, or only RegisterParticipant completed",
+      "verified_by": "Phase 11 Gate"
+    },
+    {
+      "feature_id": "F-008",
+      "feature": "Five price assets available on mainnet",
+      "observable": "GetPrice returns price > 0 for all 5: VARA, BTC, ETH, DOT, USDT",
+      "test_command": "loop over 5 assets with gcli query GetPrice",
+      "sentinel_fail": "Any asset returns null or price == 0",
+      "verified_by": "Phase 13 Gate"
+    },
+    {
+      "feature_id": "F-009",
+      "feature": "Three services accessible via single program ID",
+      "observable": "GetPrice, GetScore, FindByCapability all succeed against same $PROGRAM_ID",
+      "test_command": "gcli query $PROGRAM_ID for each of the 3 services",
+      "sentinel_fail": "Any service returns 'service not found' or requires different program ID",
+      "verified_by": "Phase 5 Gate + Phase 10 Gate"
+    }
+  ]
+}

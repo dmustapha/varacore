@@ -1,0 +1,188 @@
+{
+  "project": "varacore",
+  "currentPhase": "phase-14",
+  "currentStep": "14.4",
+  "currentSubStep": "14.4.d",
+  "status": "complete",
+  "autonomous_mode": true,
+  "completedSteps": [
+    "1.1", "1.2", "1.3",
+    "2.1", "2.2", "2.3",
+    "3.1",
+    "4.1", "4.2",
+    "5.1", "5.2",
+    "6.1",
+    "7.1", "7.2",
+    "8.1", "8.2", "8.3", "8.4",
+    "9.1", "9.2",
+    "11.0-skill-md", "for-dami",
+    "11.1", "11.2", "11.3",
+    "13.1",
+    "14.1", "14.2", "14.3", "14.4"
+  ],
+  "fileGroups": {
+    "phase-1": [
+      "varacore/Cargo.toml",
+      "varacore/build.rs",
+      "varacore/src/lib.rs",
+      "varacore/src/oracle.rs",
+      "varacore/src/reputation.rs",
+      "varacore/src/registry.rs",
+      "price-consumer/Cargo.toml",
+      "price-consumer/src/lib.rs",
+      "agent-consumer/Cargo.toml",
+      "agent-consumer/src/lib.rs"
+    ],
+    "phase-8": [
+      "agent/package.json",
+      "agent/tsconfig.json",
+      "agent/src/price-agent.ts",
+      "agent/src/register-hub.ts",
+      "agent/src/seed-interactions.ts",
+      "agent/src/register-test-agents.ts"
+    ]
+  },
+  "deviations": ["DEV-001", "DEV-002", "DEV-003", "DEV-004", "DEV-005", "DEV-006", "DEV-007", "DEV-008"],
+  "contractAddresses": {
+    "testnet_program_id": "0x1f605827629395edfb02ffea469bac6e9a44fdd1a1d110700d7504e6157c33d9",
+    "hub_participant_handle": "varacore",
+    "hub_app_handle": "varacore-app",
+    "hub_operator_hex": "0xea08de939ba8378c9896342b081ccf715856f6f613301e9fd1357f4f9efadb4a",
+    "hub_voucher_id": "0x676c98529a71900c4adf7caad6453ae18ef811d2d3c2b7058df2b02a8cf715de",
+    "hub_status": "Submitted",
+    "artifacts_gist": "https://gist.github.com/dmustapha/ce34e8268f895ca55dda84e21217c3bf",
+    "mainnet_varacore_program_id": "0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078",
+    "mainnet_price_consumer_program_id": "0xc6836012147737b2e610677403845cc9decb55c75c5488b547278f3cd5554d1a",
+    "mainnet_agent_consumer_program_id": "0xc12b0063953adb7b40ed6f01521b9b0e861d7361b6eb0739cdea573e3ca2349b",
+    "mainnet_btc_price_block": 33185258,
+    "hub_identity_card_block": 33185229,
+    "hub_announcement_id": "161",
+    "hub_chat_message_id": "2288"
+  },
+  "env": {
+    "VARA_ENDPOINT": "wss://testnet.vara.network",
+    "VARACORE_PROGRAM_ID": "0x1f605827629395edfb02ffea469bac6e9a44fdd1a1d110700d7504e6157c33d9",
+    "AGENT_SEED": "//Alice"
+  },
+  "devPort": 3000,
+  "depsVerified": true,
+  "verification_commands": [
+    "cargo check --target wasm32-unknown-unknown",
+    "CARGO_NET_OFFLINE=true cargo test -p varacore",
+    "CARGO_NET_OFFLINE=true cargo build -p varacore --release",
+    "cd agent && npx tsc --noEmit"
+  ],
+  "screenshot_paths": [],
+  "context_percentage": 30,
+  "timestamp": "2026-05-23T01:10:00Z",
+  "expected_phases": [
+    "Phase 1: Toolchain Setup + Workspace Scaffold",
+    "Phase 2: OracleService Core",
+    "Phase 3: ScheduleRefresh + Delayed Self-Message",
+    "Phase 4: ReputationService",
+    "Phase 5: AgentRegistryService",
+    "Phase 6: Shared Types + SCALE Encoding",
+    "Phase 7: Unit Tests (gtest)",
+    "Phase 8: WASM Build + IDL Generation",
+    "Phase 9: Companion Programs",
+    "Phase 10: TypeScript Agent (price-feeder)",
+    "Phase 11: Hub Catalog Registration Script",
+    "Phase 12: Integration Tests",
+    "Phase 13: Testnet Deployment",
+    "Phase 14: Mainnet Deployment + Hub Board Post",
+    "Phase 15: Proof Generation"
+  ],
+  "phase_ledger": [
+    {
+      "phase": "phase-1",
+      "status": "COMPLETE",
+      "gate": "cargo check --target wasm32-unknown-unknown",
+      "gate_result": "exit 0",
+      "completed_at": "2026-05-22T14:30:00Z"
+    },
+    {
+      "phase": "phase-2",
+      "status": "COMPLETE",
+      "gate": "CARGO_NET_OFFLINE=true cargo test -p varacore",
+      "gate_result": "16/16 tests pass",
+      "completed_at": "2026-05-22T15:00:00Z"
+    },
+    {
+      "phase": "phase-3",
+      "status": "COMPLETE",
+      "gate": "On-chain loop confirmed",
+      "gate_result": "VERIFIED on testnet 2026-05-23: ScheduleRefresh returned Ok(()) with gear.MessageQueued event. Delayed self-message queued successfully.",
+      "completed_at": "2026-05-23T01:05:00Z"
+    },
+    {
+      "phase": "phase-4",
+      "status": "COMPLETE",
+      "gate": "gtest reputation tests pass",
+      "gate_result": "5/5 reputation tests pass",
+      "completed_at": "2026-05-22T15:00:00Z"
+    },
+    {
+      "phase": "phase-5",
+      "status": "COMPLETE",
+      "gate": "gtest registry tests pass",
+      "gate_result": "6/6 registry tests pass",
+      "completed_at": "2026-05-22T15:00:00Z"
+    },
+    {
+      "phase": "phase-6",
+      "status": "COMPLETE",
+      "gate": "Binary <= 2MB",
+      "gate_result": "varacore.opt.wasm = 104K (via gear-wasm-builder/wasm32v1-none)",
+      "completed_at": "2026-05-23T01:00:00Z"
+    },
+    {
+      "phase": "phase-7",
+      "status": "COMPLETE",
+      "gate": "Cross-program calls compile",
+      "gate_result": "price-consumer + agent-consumer compile for wasm32 (warnings only)",
+      "completed_at": "2026-05-22T12:10:00Z"
+    },
+    {
+      "phase": "phase-8",
+      "status": "COMPLETE",
+      "gate": "Price agent runs locally (tsc --noEmit)",
+      "gate_result": "tsc --noEmit exit 0, all 4 TypeScript files compile clean",
+      "completed_at": "2026-05-22T12:15:00Z"
+    },
+    {
+      "phase": "phase-9",
+      "status": "COMPLETE",
+      "gate": "Agent updates price on-chain",
+      "gate_result": "BTC/USD UpdatePrice succeeded on testnet 2026-05-23. GetPrice reply confirmed price stored. Phase 3 ScheduleRefresh also VERIFIED.",
+      "completed_at": "2026-05-23T01:10:00Z"
+    },
+    {
+      "phase": "phase-13",
+      "status": "COMPLETE",
+      "gate": "VaraCore deployed to testnet",
+      "gate_result": "Program ID: 0x1f605827629395edfb02ffea469bac6e9a44fdd1a1d110700d7504e6157c33d9",
+      "completed_at": "2026-05-23T01:00:00Z"
+    },
+    {
+      "phase": "phase-11",
+      "status": "COMPLETE",
+      "gate": "Hub Catalog registration (RegisterParticipant + RegisterApplication + SubmitApplication)",
+      "gate_result": "VERIFIED via indexer: handle=varacore-app, status=Submitted, track=Services. txHashes: RegisterParticipant=0x4b892bc1..., RegisterApplication=0x07c916bd..., SubmitApplication=0x2bbf73f7...",
+      "completed_at": "2026-05-23T02:00:00Z"
+    },
+    {
+      "phase": "phase-13",
+      "status": "COMPLETE",
+      "gate": "Three programs deployed to Vara mainnet",
+      "gate_result": "VaraCore=0xe1f8f299... (block 33184939), PriceConsumer=0xc68360... (block 33185059), AgentConsumer=0xc12b00... (block 33185063). Cross-program calls confirmed: PriceConsumer→VaraCore (Oracle/GetPrice) tx=0x210b..., AgentConsumer→VaraCore (Registry/GetAgentsByCapability) tx=0xa532... returned Ok(1).",
+      "completed_at": "2026-05-23T03:00:00Z"
+    },
+    {
+      "phase": "phase-14",
+      "status": "COMPLETE",
+      "gate": "Hub Board post + live oracle price on mainnet",
+      "gate_result": "SetIdentityCard tx=0xd2fa... (block 33185229), PostAnnouncement id=161 tx=0xdac8... (block 33185236), Chat/Post id=2288 tx=0xe6ea... (block 33185241). BTC/USD=75377.00 USD stored on mainnet VaraCore (block 33185258, tx=0xcf45...).",
+      "completed_at": "2026-05-23T04:00:00Z"
+    }
+  ]
+}

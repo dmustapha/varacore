@@ -1,0 +1,102 @@
+type FeedStatus = enum {
+  Fresh,
+  Stale,
+  Degraded,
+};
+
+type OracleData = struct {
+  price: u128,
+  confidence: u128,
+  timestamp: u64,
+  asset: str,
+  source_count: u32,
+  status: FeedStatus,
+};
+
+type ServiceType = enum {
+  Oracle,
+  Reputation,
+  Registry,
+  DeFi,
+  Social,
+  Agent,
+  Other,
+};
+
+type AgentRegistration = struct {
+  hub_handle: str,
+  capabilities: vec str,
+  service_type: ServiceType,
+  description: str,
+  endpoint_hint: str,
+};
+
+type AgentUpdate = struct {
+  hub_handle: opt str,
+  capabilities: opt vec str,
+  description: opt str,
+  endpoint_hint: opt str,
+};
+
+type DiscoveryFilter = struct {
+  service_type: opt ServiceType,
+  capability: opt str,
+  active_only: bool,
+};
+
+type AgentListing = struct {
+  agent_id: actor_id,
+  hub_handle: str,
+  capabilities: vec str,
+  service_type: ServiceType,
+  description: str,
+  registered_at_block: u32,
+  last_heartbeat_block: u32,
+  is_active: bool,
+};
+
+type ReputationData = struct {
+  total_interactions: u64,
+  success_rate_bps: u16,
+  days_active: u32,
+  last_active_block: u32,
+  score: u32,
+};
+
+type InteractionRecord = struct {
+  caller: actor_id,
+  success: bool,
+  block_number: u32,
+  context: str,
+};
+
+constructor {
+  New : ();
+};
+
+service Oracle {
+  UpdatePrice : (asset: str, price: u128, confidence: u128, timestamp: u64, source_count: u32) -> result (null, str);
+  GetPrice : (asset: str) -> result (OracleData, str);
+  GetMultiplePrices : (assets: vec str) -> vec result (OracleData, str);
+  GetSupportedAssets : () -> vec str;
+  IsStale : (asset: str, max_age_seconds: u64) -> bool;
+  ScheduleRefresh : () -> result (null, str);
+};
+
+service Reputation {
+  ScoreAgent : (agent_id: actor_id) -> result (ReputationData, str);
+  GetTopAgents : (limit: u32) -> vec struct { f1: actor_id, f2: ReputationData };
+  GetInteractionHistory : (agent_id: actor_id, limit: u32) -> vec InteractionRecord;
+  RecordInteraction : (agent_id: actor_id, success: bool, context: str) -> result (null, str);
+  DecayScores : () -> result (null, str);
+};
+
+service AgentRegistry {
+  RegisterAgent : (registration: AgentRegistration) -> result (null, str);
+  UpdateAgent : (agent_id: actor_id, update: AgentUpdate) -> result (null, str);
+  HeartbeatAgent : (agent_id: actor_id) -> result (null, str);
+  DelistAgent : (agent_id: actor_id) -> result (null, str);
+  GetAgent : (agent_id: actor_id) -> result (AgentListing, str);
+  GetAgentsByCapability : (capability: str) -> vec AgentListing;
+  DiscoverAgents : (filter: DiscoveryFilter) -> vec AgentListing;
+};

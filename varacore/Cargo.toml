@@ -1,0 +1,20 @@
+[package]
+name = "varacore"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+sails-rs = { version = "0.10.4", features = ["gstd"] }
+gstd = { version = "1.10.0", features = ["debug"] }
+parity-scale-codec = { version = "3", default-features = false, features = ["derive"] }
+scale-info = { version = "2", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+gtest = "1.8.1"
+sails-rs = { version = "0.10.4", features = ["gtest"] }
+
+[build-dependencies]
+gear-wasm-builder = "1.10.0"

@@ -1,0 +1,10 @@
+constructor {
+  New : ();
+};
+
+service PriceConsumer {
+  SetOracleAddress : (oracle_pid: actor_id) -> result (null, str);
+  FetchPriceFromOracle : (asset: str) -> result (u128, str);
+  query GetOracleAddress : () -> opt actor_id;
+  query GetCachedPrice : () -> struct { f1: str, f2: u128 };
+};

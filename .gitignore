@@ -1,0 +1,42 @@
+# Secrets
+
+.env
+.env.local
+.env.*.local
+
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Node.js
+node_modules/
+dist/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Local state
+.polish-state.json
+.conductor-state.json
+.debug-state.json
+.wire-state.json
+.verify-state.json
+.stress-test-state.json
+.e2e-results.json
+.deploy-state.json
+intel-state.json
+config.json
+
+# Wallet files — never commit
+*.json.keystore
+wallets/
+
+# Compiled WASM (large, reproducible)
+*.wasm
