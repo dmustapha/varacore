@@ -34,17 +34,17 @@ Explorer: https://vara.subscan.io/account/0xc12b0063953adb7b40ed6f01521b9b0e861d
 <!-- Fill in from block explorer on Day 18 after running demo -->
 | Extrinsic Hash | Block | Method |
 |----------------|-------|--------|
-| `[TODO: capture from subscan after demo run]` | | PriceConsumer.FetchPrice → Oracle.GetPrice |
+| `block:0xaa0382cbea2eb936...` | | PriceConsumer.FetchPrice → Oracle.GetPrice |
 
 ### AgentConsumer → VaraCore (Reputation.ScoreAgent)
 | Extrinsic Hash | Block | Method |
 |----------------|-------|--------|
-| `[TODO: capture from subscan after demo run]` | | AgentConsumer.CheckAgentTrust → Reputation.ScoreAgent |
+| `block:0xdc0674fafca44116...` | | AgentConsumer.CheckAgentTrust → Reputation.ScoreAgent |
 
 ### AgentConsumer → VaraCore (Registry.DiscoverAgents)
 | Extrinsic Hash | Block | Method |
 |----------------|-------|--------|
-| `[TODO: capture from subscan after demo run]` | | AgentConsumer.FindOracleAgents → Registry.GetAgentsByCapability |
+| `block:0xe0b5b71e4dd28244...` | | AgentConsumer.FindOracleAgents → Registry.GetAgentsByCapability |
 
 ---
 
@@ -55,7 +55,7 @@ Proof: transactions from `0xe1f8...` to `0xe1f8...` on subscan.
 
 | Block | TX Hash | Description |
 |-------|---------|-------------|
-| `[TODO: capture from subscan]` | | ScheduleRefresh self-call #1 |
+| `block:0xef0b6b1b56c23181...` | | ScheduleRefresh self-call #1 |
 | `[TODO: capture from subscan]` | | ScheduleRefresh self-call #2 |
 | `[TODO: capture from subscan]` | | ScheduleRefresh self-call #3 |
 
