@@ -1,0 +1,117 @@
+{
+  "status": "complete",
+  "overall": "PASS",
+  "testedAt": "2026-05-30T11:17:02.688Z",
+  "testedUrl": "vara:0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078",
+  "domains": {
+    "rpc_baseline": {
+      "status": "PASS",
+      "notes": "Vara mainnet RPC + wallet"
+    },
+    "oracle_commands": {
+      "status": "PASS",
+      "notes": "UpdatePrice × 5 assets"
+    },
+    "oracle_queries": {
+      "status": "PASS",
+      "notes": "GetPrice, GetMultiple, IsStale, GetSupported"
+    },
+    "reputation_commands": {
+      "status": "PASS",
+      "notes": "RecordInteraction × 15"
+    },
+    "reputation_queries": {
+      "status": "PASS",
+      "notes": "ScoreAgent, TopAgents, History, Decay"
+    },
+    "registry_commands": {
+      "status": "PASS",
+      "notes": "RegisterAgent, Heartbeat"
+    },
+    "registry_queries": {
+      "status": "PASS",
+      "notes": "DiscoverAgents × 3 filters, GetAgent, GetByCap"
+    },
+    "error_paths": {
+      "status": "PASS",
+      "notes": "Unsupported asset, zero price, wrong caller"
+    },
+    "schedule_refresh": {
+      "status": "PASS",
+      "notes": "Delayed self-message scheduling"
+    },
+    "cross_program": {
+      "status": "PASS",
+      "notes": "PriceConsumer + AgentConsumer → VaraCore"
+    },
+    "scale_encoding": {
+      "status": "PASS",
+      "notes": "Round-trip verified via UpdatePrice+GetPrice"
+    }
+  },
+  "criticalIssues": [],
+  "warnings": [],
+  "proofHashes": {
+    "D2-UP-VARA/USD": "0x34418ca23f401288552be66384aa6a092ee526bdbdb87145d4cff518d260c419",
+    "D2-UP-BTC/USD": "0xa7a4e88e421a9ebdda70378cc2ea6b80ac2a3e58859c92fe2054c52d385d6d01",
+    "D2-UP-ETH/USD": "0xa031108292efbf26115d8e1697c8235de2615921dae23c16ea9a86e4fab09926",
+    "D2-UP-DOT/USD": "0xece3f3cb20acf77b0713c4d0ccd030bc0683937ea1abe4b68486c40764545ddd",
+    "D2-UP-USDT/USD": "0xd41c5ad644ba8cf50aef9ffeb240a49152b9d895ee1620f452f39efb147e36ac",
+    "D3-GSA": "0x0144bf4421d0368212d67bdc2a2c4db635d942b4e740ed5e875863f5472bef27",
+    "D3-GP-VARA/USD": "0x42e59da231d1442967a8d4321552cfdf14a8abca4cd8759d22e384339e461494",
+    "D3-GP-BTC/USD": "0x7b74c0571653f5aee98f9ea737a4078338a73e571abc7c606373905241d92b62",
+    "D3-GP-ETH/USD": "0xa3db8b68fd8f970fbde9c7e2b1c0519793ad95bf6f58b877b330d35a03f4ece9",
+    "D3-GP-DOT/USD": "0x285f7f07dfccd7ea4d2ad84989d6a3a348e04992c507b37866e36f1dffd1e584",
+    "D3-GP-USDT/USD": "0xab45f5948e2d9c4c9d69c0e512e1d9d6340745436ff21863fc619e2625b4053e",
+    "D3-GMP": "0x9fba9e885f21a409a0c5600eef01c1ab548b70b2dfabe74789d8b0bf616840d7",
+    "D3-IS-FRESH": "0x51e2f8d70a199c3ffe0cdc91b192acdf07087d6f4c7220351216419bce9ededf",
+    "D3-IS-STALE": "0x09eb4b225f0f92033380f2b86ba30ec4f2d65d51658f65898902fb79c293b51c",
+    "D4-RI-0xc68360-0": "0x57878a8e02144c91b21ed1af463b6dc120c0762fa6b0b1014b214623e789b454",
+    "D4-RI-0xc68360-1": "0x036fe14a2acb7e71a8c7a15477bd55d4a223b4e730f31dbb42257333d13738ac",
+    "D4-RI-0xc68360-2": "0xe8ccae87182fd84137d6a33edbe083fd93eb1467e061b4785adf0d5baa5eb419",
+    "D4-RI-0xc68360-3": "0xab9a154f0c3d1e15bf613e2bfbe75ab71ff762e58b82d73f7ef4d785e9480a55",
+    "D4-RI-0xc68360-4": "0xc7edb6cdd7b2df553efbadb2c80d29f31fe28fa042d14d2021f819b53abadca2",
+    "D4-RI-0xc12b00-0": "0xd952d534082653f75e43d4d5834c0fdd1f91d1d4db0f1edbeda4f714e507aba9",
+    "D4-RI-0xc12b00-1": "0xd653b56bc8fe986dd0cd8039be09fada5874fde2e733603ee6562a030ac4de99",
+    "D4-RI-0xc12b00-2": "0x36276d59d5ac7bc07593ba9f994243ed0df6fb12e9c79021a85f447674507d51",
+    "D4-RI-0xc12b00-3": "0x74d30252b422ca34d9dad595921b5206aa44bbbb0ae0fa318f0f479a06fddc7b",
+    "D4-RI-0xc12b00-4": "0x4303dcde44f4af9143597097a71c3a44bd2ec0bae3842d3af85e1efc3f3b9c4a",
+    "D4-RI-0xaaaaaa-0": "0x8e591504c25ca807ec6c5e9093c84f380398b431918e2063cac406f7a9c8f5af",
+    "D4-RI-0xaaaaaa-1": "0xf45d26ee2e2b1b464e5b0dcbff385db8b42c8baae688e4a758dc254f498831f2",
+    "D4-RI-0xaaaaaa-2": "0x52661aa1403220cbef165580750c9859cae2d049b25cc5c854cb628facb8fe6f",
+    "D4-RI-0xaaaaaa-3": "0xd56e7fa21c4658758763c6abc00b82034f3d11e0a35262e55255db9e28de418b",
+    "D4-RI-0xaaaaaa-4": "0x1bbb167baad0ea095baaa40bce448e1cf0a85e82f6dd309d274f10bf67fa7c8f",
+    "D5-SA-PC": "0x48d74ceb6860a28852562e957a7a7c42dfb47fb0fac4af8ef73c193e4dca483f",
+    "D5-SA-AC": "0x80898ae42d44133a5729d50a4d169a68883356b38f92b292f43aa6af6e8e0605",
+    "D5-SA-MOC": "0xb752c067b1b2efcd91d9eb2ecab134c668a4ab29bbba4e52fed42f3eb69e0859",
+    "D5-GTA": "0x19360c013aa62cd5ea1fedb62f59784297419b47c1b5ae1cfc67f1ab348c0a4e",
+    "D5-GIH": "0x0b47f3d758c19c4fbb83346e70a69ccfc0ff368c0a5cb1d7bd97e4ae83a37a78",
+    "D5-DS": "0x422c3ebd846856e756d705ca6f60a9472924842e74e6eef6c936b2abec07d73a",
+    "D6-RA": "0x0a743ff1d06258339794b48808a8ac4328b8717feea4c126c4d4c6941a81d101",
+    "D6-HB": "0xe35ef3d8a023a667c0e2a1619fd6087524db82064e4d126ed330d90f4b0cd5c5",
+    "D7-GA": "0x71236da777d9d76903a195120eb90ae647e1779b94177ee0e5a77af026142e0b",
+    "D7-DA-ALL": "0xc38701330f6575ba239a62d205a7b383116f507cf4c7e09da4201d44daa9c735",
+    "D7-DA-ORC": "0xe6185e860021a11735339127c6e1bc8ee57fee572fb22784c592e0a681415087",
+    "D7-DA-CAP": "0xe7f028079cb6bd008e4e8fe327cd4a7e0055b2247f5df02a30fa40ec42e3f117",
+    "D7-GABC": "0xb7d9fb582df6c58f8129d771de4e324d4f7e1b4e29130f88cde6cac0ed233abe",
+    "D8-UP-UNS": "0x5923ce39befc41d6d346d1694ff474a45296bd8b7192cff0eaebf36379e4e2eb",
+    "D8-UP-ZERO": "0x7da87e83351f160a83e2df473ba623d6bde3a6ba1e35ee4013c8b5fc699e2985",
+    "D8-GP-UNK": "0x6ff7fd27a07c1248bcf71c1ce317f60da3d56ca9a380fecb34146cbcce8c45a0",
+    "D8-SA-UNR": "0xf83899986268ece0502e0b08ae88ec9a5deee8eb7b4aede259edf5860eb36bcd",
+    "D8-HB-WRONG": "0x92b26d0fdb0d3802ba8ce62cf988fbd0a1cb3c3208054594631269179728ffec",
+    "D8-GA-UNR": "0x033861898625d989f4f975e37120b5c819658b673205a42a82ac1d4d944d87f8",
+    "D9-SR": "0xef0b6b1b56c23181bc19f3e9bf48a192282008de389ae1bbbe1bf8fe81613caa",
+    "schedule-refresh": "0xef0b6b1b56c23181bc19f3e9bf48a192282008de389ae1bbbe1bf8fe81613caa",
+    "D10-PC-FETCH": "0xaa0382cbea2eb936acae783eede24df4d0a518b9d22cf2191dfd32e91e4f4a26",
+    "price-consumer-fetch": "0xaa0382cbea2eb936acae783eede24df4d0a518b9d22cf2191dfd32e91e4f4a26",
+    "D10-PC-CACHE": "0x409218b91b64cd78cdc3c0a34786a6d1acf20dfb668a8e9431bd51837916884e",
+    "D10-AC-TRUST": "0xdc0674fafca4411679e5564bfdb159a0845dfa6eb7ce9afcb3d3c82605c23c31",
+    "agent-consumer-trust": "0xdc0674fafca4411679e5564bfdb159a0845dfa6eb7ce9afcb3d3c82605c23c31",
+    "D10-AC-DISC": "0xe0b5b71e4dd282445f7d0b360e7d9946631dc7a26febe1877d0f7fe8bb087330",
+    "agent-consumer-discovery": "0xe0b5b71e4dd282445f7d0b360e7d9946631dc7a26febe1877d0f7fe8bb087330",
+    "D10-AC-SCORE": "0xad9a4a83a86d18af3a6492cc7e04cf49f50a4ff5f27ff4a6480f2d4840998e09",
+    "D10-AC-DISCCT": "0x603f4af4f4c22d37e486b49d6faa8dd9f0ab8ee2eba71ae0cf3aaddef59e51f3"
+  },
+  "reportPath": "/Users/MAC/vara-a2a/LIVETEST-REPORT.md",
+  "blockerReason": null
+}
