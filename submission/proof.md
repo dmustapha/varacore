@@ -117,6 +117,6 @@ To verify: call `Oracle.GetPrice("BTC/USD")` on mainnet VaraCore.
 
 ## Source
 
-GitHub: https://github.com/dmustapha/vara-a2a
+GitHub: https://github.com/dmustapha/varacore
 IDL: `varacore/varacore.idl` (canonical SCALE interface)
 Skill doc: `varacore/SKILL.md` (for agent integration)
