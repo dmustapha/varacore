@@ -245,3 +245,57 @@ impl AgentRegistryService<'_> {
         Ok(())
     }
 }
+
+// ─────────────── Unit tests for is_active boundary ───────────────
+// Covers Section 11 TC-03/04 of TESTING-PLAN-V2.md (1000-block gap boundary).
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+    use alloc::string::String;
+    use alloc::vec::Vec;
+    use gstd::ActorId;
+
+    fn make_listing(last_heartbeat_block: u32) -> AgentListing {
+        AgentListing {
+            agent_id: ActorId::from([0u8; 32]),
+            hub_handle: String::new(),
+            capabilities: Vec::new(),
+            service_type: ServiceType::Other,
+            description: String::new(),
+            registered_at_block: 0,
+            last_heartbeat_block,
+            is_active: true,
+        }
+    }
+
+    // TC-V2-11-03: 999-block gap → active (999 < 1000)
+    #[test]
+    fn is_active_at_999_block_gap() {
+        let listing = make_listing(100);
+        assert!(RegistryState::is_active(&listing, 1099)); // 1099 - 100 = 999
+    }
+
+    // TC-V2-11-04: 1000-block gap → inactive (1000 is NOT < 1000)
+    #[test]
+    fn is_active_at_1000_block_gap() {
+        let listing = make_listing(100);
+        assert!(!RegistryState::is_active(&listing, 1100)); // 1100 - 100 = 1000
+    }
+
+    // Full boundary: 999 active, 1000 inactive, 1001 inactive
+    #[test]
+    fn is_active_boundary_transitions() {
+        let listing = make_listing(0);
+        assert!(RegistryState::is_active(&listing, 999));   // 999 < 1000 → active
+        assert!(!RegistryState::is_active(&listing, 1000)); // 1000 not < 1000 → inactive
+        assert!(!RegistryState::is_active(&listing, 1001)); // 1001 not < 1000 → inactive
+    }
+
+    // Underflow: heartbeat_block > current_block → saturating_sub → 0, always active
+    #[test]
+    fn is_active_no_underflow() {
+        let listing = make_listing(5000);
+        assert!(RegistryState::is_active(&listing, 100)); // 100.saturating_sub(5000) = 0 < 1000
+    }
+}

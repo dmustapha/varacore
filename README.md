@@ -5,7 +5,7 @@ Three composable services in one Sails program: price oracle, reputation scorer,
 [![Rust](https://img.shields.io/badge/Rust-1.75-orange?logo=rust)](https://www.rust-lang.org/)
 [![Sails](https://img.shields.io/badge/Sails-0.10.4-purple)](https://github.com/gear-tech/sails)
 [![Network](https://img.shields.io/badge/Network-Vara%20Mainnet-blue)](https://vara.network)
-[![Tests](https://img.shields.io/badge/tests-19%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-54%20unit%20%7C%2093%20mainnet-brightgreen)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Mainnet:** `0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078`
@@ -164,7 +164,7 @@ Off-chain price-feeder agent (TypeScript)
 cargo build --release --target wasm32-unknown-unknown
 
 # Run tests
-cargo test -p varacore  # 19 tests
+cargo test -p varacore  # 54 tests
 
 # Run the off-chain price agent
 cd agent
