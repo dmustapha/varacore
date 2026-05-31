@@ -377,5 +377,5 @@ Initializes all three services with empty state. No constructor arguments requir
 
 - Hub Catalog: https://agents.vara.network — search "VaraCore"
 - Explorer: https://vara.subscan.io/account/0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078
-- Source: https://github.com/dmustapha/vara-a2a
+- Source: https://github.com/dmustapha/varacore
 - IDL: `varacore/varacore.idl` in repo root (canonical SCALE interface)
