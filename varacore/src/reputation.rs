@@ -207,3 +207,101 @@ impl ReputationService<'_> {
         Ok(())
     }
 }
+
+// ─────────────── Unit tests for pure scoring logic ───────────────
+// Covers Sections 4–6 of TESTING-PLAN-V2.md (score math, days_active, c3 longevity).
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+
+    fn make_rep(total: u64, successful: u64, first_block: u32) -> AgentReputation {
+        AgentReputation {
+            total_interactions: total,
+            successful_interactions: successful,
+            first_active_block: first_block,
+            last_active_block: first_block,
+        }
+    }
+
+    // floor_log2 boundary values
+    #[test]
+    fn floor_log2_boundaries() {
+        assert_eq!(floor_log2(0), 0);
+        assert_eq!(floor_log2(1), 0);
+        assert_eq!(floor_log2(2), 1);
+        assert_eq!(floor_log2(3), 1);
+        assert_eq!(floor_log2(4), 2);
+        assert_eq!(floor_log2(7), 2);
+        assert_eq!(floor_log2(8), 3);
+        assert_eq!(floor_log2(16), 4);
+        assert_eq!(floor_log2(32), 5);
+        assert_eq!(floor_log2(64), 6);
+        assert_eq!(floor_log2(128), 7);
+        assert_eq!(floor_log2(256), 8);
+    }
+
+    // days_active formula: blocks_elapsed / 28800
+    #[test]
+    fn days_active_formula() {
+        let rep = make_rep(0, 0, 0);
+        assert_eq!(rep.days_active(0), 0);
+        assert_eq!(rep.days_active(28_799), 0); // one block short
+        assert_eq!(rep.days_active(28_800), 1); // exactly 1 day
+        assert_eq!(rep.days_active(86_400), 3); // 3 days
+        assert_eq!(rep.days_active(201_600), 7); // 7 days
+    }
+
+    // zero interactions → score 0
+    #[test]
+    fn score_zero_interactions() {
+        let rep = make_rep(0, 0, 0);
+        assert_eq!(compute_score(&rep, 0), 0);
+    }
+
+    // c2 (interaction count) score table: n interactions, all success, day 0
+    // c1=40, c2=floor_log2(n)*5, c3=0, c4=10 → raw=50+c2, score=(50+c2)*10
+    #[test]
+    fn score_c2_table() {
+        let cases: &[(u64, u32)] = &[
+            (1,   500),
+            (2,   550),
+            (4,   600),
+            (8,   650),
+            (16,  700),
+            (32,  750),
+            (64,  800),
+            (128, 850),
+            (256, 900),
+        ];
+        for &(n, expected) in cases {
+            let rep = make_rep(n, n, 0);
+            assert_eq!(compute_score(&rep, 0), expected, "n_interactions={}", n);
+        }
+    }
+
+    // TC-V2-4-10: c3 longevity — 1 interaction (100% success), 1 day elapsed
+    // first_active_block=0, current_block=28800 → days=1
+    // c1=40, c2=0, c3=floor_log2(2)*7=7, c4=10 → raw=57, score=570
+    #[test]
+    fn score_c3_one_day() {
+        let rep = make_rep(1, 1, 0);
+        assert_eq!(compute_score(&rep, 28_800), 570);
+    }
+
+    // TC-V2-4-11: c3 at 3 days
+    // days=3, floor_log2(4)=2, c3=14 → c1=40, c2=0, c3=14, c4=10 → raw=64, score=640
+    #[test]
+    fn score_c3_three_days() {
+        let rep = make_rep(1, 1, 0);
+        assert_eq!(compute_score(&rep, 86_400), 640);
+    }
+
+    // TC-V2-4-12: c3 at 7 days
+    // days=7, floor_log2(8)=3, c3=21 → c1=40, c2=0, c3=21, c4=10 → raw=71, score=710
+    #[test]
+    fn score_c3_seven_days() {
+        let rep = make_rep(1, 1, 0);
+        assert_eq!(compute_score(&rep, 201_600), 710);
+    }
+}

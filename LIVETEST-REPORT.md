@@ -2,7 +2,7 @@
 
 **Program:** `0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078`
 **Network:** Vara Mainnet (wss://rpc.vara.network)
-**Tested:** 2026-05-30T11:17:02.688Z → 2026-05-30T11:28:48.880Z
+**Tested:** 2026-05-31T11:35:33.196Z → 2026-05-31T11:48:22.703Z
 **Overall:** PASS
 **Results:** 58 PASS / 0 WARN / 0 FAIL
 
@@ -30,7 +30,7 @@
 
 | ID                   | Status | Description                                       | Detail |
 |----------------------|--------|---------------------------------------------------|--------|
-| D1-RPC               | PASS | Connect to wss://rpc.vara.network                  | Chain: Vara Network | Finalized head: 0xecd17da08151d2... |
+| D1-RPC               | PASS | Connect to wss://rpc.vara.network                  | Chain: Vara Network | Finalized head: 0x24f77d003ab4dd... |
 | D1-WALLET            | PASS | Load operator wallet                               | Address: kGkprErDnb2oa4j1Skk7hK6Bbgb73ybJReAFsWPF4KpGPfHiQ |
 | D2-UP-VARA/USD       | PASS | UpdatePrice(VARA/USD)                              | Finalized OK |
 | D2-UP-BTC/USD        | PASS | UpdatePrice(BTC/USD)                               | Finalized OK |
@@ -107,10 +107,10 @@ _None_
 
 | Integration | Block Hash |
 |-------------|-----------|
-| PriceConsumer → VaraCore Oracle.GetPrice | `0xaa0382cbea2eb936acae783eede24df4d0a518b9d22cf2191dfd32e91e4f4a26` |
-| AgentConsumer → VaraCore Reputation.ScoreAgent | `0xdc0674fafca4411679e5564bfdb159a0845dfa6eb7ce9afcb3d3c82605c23c31` |
-| AgentConsumer → VaraCore Registry.GetAgentsByCapability | `0xe0b5b71e4dd282445f7d0b360e7d9946631dc7a26febe1877d0f7fe8bb087330` |
-| Oracle.ScheduleRefresh self-call | `0xef0b6b1b56c23181bc19f3e9bf48a192282008de389ae1bbbe1bf8fe81613caa` |
+| PriceConsumer → VaraCore Oracle.GetPrice | `0x5ca9b61263f585530f40b619dfef7d9b82688adf48c8f73cc8458951ec455680` |
+| AgentConsumer → VaraCore Reputation.ScoreAgent | `0x92c607c72762bdc07efc49edd453a8602b219b36fa3e0ec0928e74c6255f8b9c` |
+| AgentConsumer → VaraCore Registry.GetAgentsByCapability | `0x7e86992809016135fa03d6e1dc7586959c67afd3a94c324570206b6cc5713c12` |
+| Oracle.ScheduleRefresh self-call | `0xa9ec0dd9cbdf82e25b75e8f75c54af9793a794ee6b882c9b860102832194a82e` |
 
 ---
 

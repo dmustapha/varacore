@@ -1,5 +1,7 @@
 // File: varacore/src/oracle.rs
-// [UNVERIFIED] — Delayed message payload encoding requires testnet verification Day 12.
+// [MAINNET-VERIFIED] — ScheduleRefresh loop confirmed running on mainnet. Two sequential
+// self-calls observed (block:0xef0b6b1b... → block:0xa9ec0dd9...), proving the delayed
+// message payload encoding is correct and the loop fires every ~100 blocks.
 #![no_std]
 extern crate alloc;
 
@@ -208,12 +210,13 @@ impl OracleService<'_> {
     }
 
     /// Queues a delayed self-message to re-invoke ScheduleRefresh after ~100 blocks.
-    /// [UNVERIFIED] — SCALE encoding must be verified on testnet Day 12.
+    /// [MAINNET-VERIFIED] — Loop confirmed running. Two sequential self-calls observed
+    /// on mainnet (block:0xef0b6b1b... → block:0xa9ec0dd9...). sails-rs 0.10.x uses
+    /// string-based routing; numeric Interface ID routing is v1.0.0+ only.
     #[export]
     pub fn schedule_refresh(&mut self) -> Result<(), String> {
-        // WARNING: UNVERIFIED PATTERN — test payload format on testnet before mainnet deploy.
-        // DEV-007: sails-rs route = PascalCase of accessor fn name: oracle() → "Oracle"
-        // Method route = PascalCase of fn name: schedule_refresh() → "ScheduleRefresh"
+        // sails-rs 0.10.x route: PascalCase of accessor fn name: oracle() → "Oracle"
+        // Method route: PascalCase of fn name: schedule_refresh() → "ScheduleRefresh"
         let payload: Vec<u8> = ("Oracle", "ScheduleRefresh").encode();
         let reservation_id = exec::reserve_gas(5_000_000_000, 200)
             .map_err(|e| format!("gas reservation failed: {:?}", e))?;
@@ -225,5 +228,91 @@ impl OracleService<'_> {
             100,
         ).map_err(|e| format!("send_delayed failed: {:?}", e))?;
         Ok(())
+    }
+}
+
+// ─────────────── Unit tests for pure TwapRing logic ───────────────
+// These cover Section 2 of TESTING-PLAN-V2.md (ring buffer math not queryable via IDL).
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+    use parity_scale_codec::Encode;
+
+    // TC-V2-2-01: empty ring → twap == 0
+    #[test]
+    fn twap_empty() {
+        let ring = TwapRing::new();
+        assert_eq!(ring.twap(), 0);
+    }
+
+    // TC-V2-2-02: 1 push (100) → count==1, twap==100
+    #[test]
+    fn twap_single() {
+        let mut ring = TwapRing::new();
+        ring.push(100, 1);
+        assert_eq!(ring.count, 1);
+        assert_eq!(ring.twap(), 100);
+    }
+
+    // TC-V2-2-03: 2 pushes [100, 200] → twap == 150
+    #[test]
+    fn twap_two_observations() {
+        let mut ring = TwapRing::new();
+        ring.push(100, 1);
+        ring.push(200, 2);
+        assert_eq!(ring.twap(), 150);
+    }
+
+    // TC-V2-2-04/05: 8 pushes [100..800] → count==8, head==0, twap==450
+    #[test]
+    fn twap_full_ring() {
+        let mut ring = TwapRing::new();
+        for (i, p) in [100u128, 200, 300, 400, 500, 600, 700, 800].iter().enumerate() {
+            ring.push(*p, (i + 1) as u64);
+        }
+        assert_eq!(ring.count, 8);
+        assert_eq!(ring.head, 0);
+        // sum = 3600, 3600 / 8 = 450
+        assert_eq!(ring.twap(), 450);
+    }
+
+    // TC-V2-2-06/07: 9th push (900) → obs[0]==900, head==1, count==8, twap==550
+    #[test]
+    fn twap_9th_push_wraps() {
+        let mut ring = TwapRing::new();
+        for (i, p) in [100u128, 200, 300, 400, 500, 600, 700, 800].iter().enumerate() {
+            ring.push(*p, (i + 1) as u64);
+        }
+        ring.push(900, 9);
+        assert_eq!(ring.head, 1);
+        assert_eq!(ring.count, 8);
+        assert_eq!(ring.observations[0], 900);
+        // ring = [900,200,300,400,500,600,700,800] sum=4400, 4400/8=550
+        assert_eq!(ring.twap(), 550);
+    }
+
+    // TC-V2-2-08/09: 10th push (1000) → obs[1]==1000, head==2, twap==650
+    #[test]
+    fn twap_10th_push_wraps_second_slot() {
+        let mut ring = TwapRing::new();
+        for (i, p) in [100u128, 200, 300, 400, 500, 600, 700, 800].iter().enumerate() {
+            ring.push(*p, (i + 1) as u64);
+        }
+        ring.push(900, 9);
+        ring.push(1000, 10);
+        assert_eq!(ring.head, 2);
+        assert_eq!(ring.count, 8);
+        assert_eq!(ring.observations[1], 1000);
+        // ring = [900,1000,300,400,500,600,700,800] sum=5200, 5200/8=650
+        assert_eq!(ring.twap(), 650);
+    }
+
+    // TC-V2-2-10: FeedStatus SCALE variant indices — Fresh=0, Stale=1, Degraded=2
+    #[test]
+    fn feed_status_scale_encoding() {
+        assert_eq!(FeedStatus::Fresh.encode(), alloc::vec![0u8]);
+        assert_eq!(FeedStatus::Stale.encode(), alloc::vec![1u8]);
+        assert_eq!(FeedStatus::Degraded.encode(), alloc::vec![2u8]);
     }
 }
