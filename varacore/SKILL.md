@@ -4,7 +4,7 @@
 **Mainnet Program ID:** `0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078`
 **Network:** Vara Network (mainnet) / wss://rpc.vara-network.io
 **Framework:** sails-rs 0.10.4 | SCALE-encoded messages
-**Version:** 1.0.0 | Built: 2026-05-22
+**Version:** 3.0.0 | Built: 2026-06-02
 
 ---
 
