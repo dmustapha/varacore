@@ -169,3 +169,10 @@ Skill doc: `varacore/SKILL.md` (for agent integration)
 | AgentConsumer → VaraCore Registry.GetAgentsByCapability | `0xa9ced4b92e403946fd67dd0b9ce08d8b269d3e971a9b729b74e79d2c3c76da64` |
 
 **Livetest V3 Result:** 235 PASS / 0 FAIL / 25 SKIP (run against v1 mainnet; v3 source improvements verified via unit tests and source inspection)
+
+---
+
+## Social Proof
+
+**Tweet:** https://x.com/capitanoo23/status/2061897861726433733
+Tagged @VaraNetwork — posted 2026-06-02
