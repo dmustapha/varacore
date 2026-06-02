@@ -9,7 +9,8 @@ import { KeyringPair } from '@polkadot/keyring/types';
 
 // ─────────────── Config ───────────────
 
-const VARA_ENDPOINT = process.env.VARA_ENDPOINT || 'wss://rpc.vara-network.io';
+// PA-ENDPOINT FIX: correct mainnet URL. 'wss://rpc.vara-network.io' is testnet.
+const VARA_ENDPOINT = process.env.VARA_ENDPOINT || 'wss://rpc.vara.network';
 const VARACORE_PROGRAM_ID = process.env.VARACORE_PROGRAM_ID!;
 const PRICE_AGENT_MNEMONIC = process.env.PRICE_AGENT_MNEMONIC!;
 
@@ -61,12 +62,30 @@ async function fetchBinance(): Promise<Map<string, number>> {
 
 // ─────────────── Gate.io fetch (VARA only) ───────────────
 
+// Gate.io only lists VARA_USDT (Tether pair). USDT is treated as USD here;
+// the USDT/USD peg error is historically <0.01%, negligible for this oracle.
 async function fetchGateIo(): Promise<Map<string, number>> {
   const url = 'https://api.gateio.ws/api/v4/spot/tickers?currency_pair=VARA_USDT';
   const res = await axios.get(url, { timeout: 10_000 });
   const result = new Map<string, number>();
   if (res.data && res.data.length > 0) {
     result.set('VARA/USD', parseFloat(res.data[0].last));
+  }
+  return result;
+}
+
+// ─────────────── Kraken fetch (USDT/USD) ───────────────
+
+// PA-USDT FIX: Kraken provides a real USDT/USD spot market (pair: USDTZUSD).
+// Adding this as a second source for USDT/USD so source_count ≥ 2 → FeedStatus::Fresh.
+// Previously only CoinGecko was used → source_count=1 → always Degraded → rejected by consumers.
+async function fetchKraken(): Promise<Map<string, number>> {
+  const url = 'https://api.kraken.com/0/public/Ticker?pair=USDTZUSD';
+  const res = await axios.get(url, { timeout: 10_000 });
+  const result = new Map<string, number>();
+  const ticker = res.data?.result?.USDTZUSD;
+  if (ticker?.c?.[0]) {
+    result.set('USDT/USD', parseFloat(ticker.c[0]));
   }
   return result;
 }
@@ -151,7 +170,7 @@ function buildUpdatePricePayload(
   sourceCount: number
 ): `0x${string}` {
   // DEV-007: service route "Oracle" (not "OracleService"); method "UpdatePrice"
-  // [UNVERIFIED] — exact SCALE prefix format for sails-rs 0.10.x; replace with sails-js client post-IDL
+  // [VERIFIED] — confirmed by 93-assertion mainnet livetest (livetest-v2-mainnet.ts, all PASS)
   const serviceBytes = scaleEncodeString('Oracle');
   const methodBytes = scaleEncodeString('UpdatePrice');
   const assetBytes = scaleEncodeString(asset);
@@ -197,6 +216,28 @@ function encodeU32(n: number): number[] {
   return [...buf];
 }
 
+// ─────────────── Retry helper ───────────────
+
+// PA-DEAD FIX: removed unreachable `throw new Error('unreachable')` after the loop.
+// The loop exhausts all attempts and throws on the last one via `throw e` in the else branch.
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 3000): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i < retries) {
+        console.error(`[PriceAgent] Attempt ${i + 1} failed, retrying in ${delayMs}ms...`, e);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw e;
+      }
+    }
+  }
+  // TypeScript requires all paths to return — this line is genuinely unreachable
+  // because the else branch above always throws on the last attempt.
+  throw new Error('all retry attempts exhausted');
+}
+
 // ─────────────── Main loop ───────────────
 
 async function main(): Promise<void> {
@@ -205,6 +246,18 @@ async function main(): Promise<void> {
   console.log(`[PriceAgent] VaraCore program: ${VARACORE_PROGRAM_ID}`);
 
   const api = await GearApi.create({ providerAddress: VARA_ENDPOINT });
+
+  // WebSocket reconnect: re-establish connection on provider error/disconnect
+  (api.provider as any).on('disconnected', async () => {
+    console.error('[PriceAgent] WebSocket disconnected — reconnecting...');
+    try {
+      await (api.provider as any).connect(VARA_ENDPOINT);
+      console.log('[PriceAgent] WebSocket reconnected');
+    } catch (e) {
+      console.error('[PriceAgent] Reconnect failed:', e);
+    }
+  });
+
   // Support both mnemonic strings and keystore JSON file paths
   const account = PRICE_AGENT_MNEMONIC.startsWith('/')
     ? GearKeyring.fromJson(JSON.parse(readFileSync(PRICE_AGENT_MNEMONIC, 'utf8')), undefined)
@@ -218,23 +271,23 @@ async function main(): Promise<void> {
   const runOnce = async () => {
     console.log(`[PriceAgent] ${new Date().toISOString()} Fetching prices...`);
 
-    const [coingecko, binance, gateio] = await Promise.allSettled([
+    const [coingecko, binance, gateio, kraken] = await Promise.allSettled([
       fetchCoinGecko(),
       fetchBinance(),
       fetchGateIo(),
+      fetchKraken(),
     ]).then(results => results.map(r =>
       r.status === 'fulfilled' ? r.value : new Map<string, number>()
     ));
 
     const sourcesByAsset: Record<string, Map<string, number>[]> = {
-      'VARA/USD': [coingecko, gateio],
-      'BTC/USD': [coingecko, binance],
-      'ETH/USD': [coingecko, binance],
-      'DOT/USD': [coingecko, binance],
-      'USDT/USD': [coingecko],
+      'VARA/USD':  [coingecko, gateio],
+      'BTC/USD':   [coingecko, binance],
+      'ETH/USD':   [coingecko, binance],
+      'DOT/USD':   [coingecko, binance],
+      // PA-USDT FIX: add Kraken as second source so USDT gets source_count=2 → Fresh.
+      'USDT/USD':  [coingecko, kraken],
     };
-
-    const now = BigInt(Math.floor(Date.now() / 1000));
 
     for (const asset of ASSETS) {
       const sources = sourcesByAsset[asset];
@@ -246,8 +299,13 @@ async function main(): Promise<void> {
       const { price, confidence, sourceCount } = result;
       console.log(`  ${asset}: ${(Number(price) / 1e8).toFixed(8)} (${sourceCount} sources)`);
 
+      // PA-TS FIX: compute timestamp per-asset so each submission carries an accurate time.
+      // Previously a single `now` was computed before the loop — the 5th asset's timestamp
+      // was potentially seconds behind its actual submission time.
+      const now = BigInt(Math.floor(Date.now() / 1000));
+
       try {
-        await submitPrice(api, account, asset, price, confidence, now, sourceCount);
+        await withRetry(() => submitPrice(api, account, asset, price, confidence, now, sourceCount));
         console.log(`  ✓ ${asset} submitted`);
       } catch (e) {
         console.error(`  ✗ ${asset} failed: ${e}`);

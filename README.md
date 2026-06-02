@@ -43,10 +43,11 @@ Any caller can record a success or failure for any agent. Scores (0–1000) are 
 ```rust
 let payload = ("Reputation", "ScoreAgent", agent_actor_id).encode();
 // Returns: Result<ReputationData, String>
-// score >= 600 = trusted for standard operations
+// score >= 400 = minimum trust threshold (enforced by AgentConsumer companion)
+// score >= 600 = recommended for standard operations
 ```
 
-### AgentRegistryService: Capability-aware agent discovery
+### Registry (AgentRegistryService): Capability-aware agent discovery
 
 Agents register with tags (e.g., `"price-feed"`, `"defi"`, `"governance"`). Other agents query by capability or service type, filtering for active agents only.
 
@@ -64,7 +65,7 @@ let payload = ("Registry", "DiscoverAgents", filter).encode();
 - **Cross-program native:** designed for Sails `msg::send_bytes_for_reply` calls from other programs
 - **SCALE-encoded interface:** IDL in `varacore/varacore.idl`; fully language-agnostic
 - **Permanent on-chain state:** programs on Vara are immutable; VaraCore runs indefinitely
-- **Off-chain agent:** TypeScript price-feeder pulls CoinGecko/Binance/Gate.io, aggregates, and calls `UpdatePrice` every ~100 blocks via `ScheduleRefresh`
+- **Off-chain agent:** TypeScript price-feeder pulls CoinGecko/Binance/Gate.io, aggregates, and calls `UpdatePrice` every 5 minutes. `ScheduleRefresh` proves autonomous on-chain self-messaging as a separate capability
 
 ---
 
@@ -99,9 +100,12 @@ const VARACORE: ActorId = ActorId::new(hex_literal::hex!(
 
 // Query a price
 let payload = ("Oracle", "GetPrice", "BTC/USD").encode();
-let reply = msg::send_bytes_for_reply(VARACORE, &payload, 0, 2_000_000_000)
+let reply = msg::send_bytes_for_reply(VARACORE, &payload, 0, 50_000_000_000)
     .expect("send failed").await.expect("reply failed");
-// reply[0] == 0x00 → Ok; decode OracleData from reply[1..]
+// reply prefix: 16 bytes (SCALE("Oracle")=7 + SCALE("GetPrice")=9).
+// reply[16] = Result discriminant (0x00=Ok, 0x01=Err).
+// Idiomatic: Result<OracleData,String>::decode(&mut &reply[16..])
+// Manual: OracleData::decode(&mut &reply[17..]) after checking reply[16]==0x00
 
 // Check agent reputation
 let payload = ("Reputation", "ScoreAgent", counterparty).encode();
@@ -118,7 +122,7 @@ See [`varacore/SKILL.md`](varacore/SKILL.md) for complete method signatures, res
 |---------|-------|-------------|-------------|
 | OracleService | `"Oracle"` | 500_000_000 | 2_000_000_000 |
 | ReputationService | `"Reputation"` | 500_000_000 | 1_000_000_000 |
-| AgentRegistryService | `"Registry"` | 500_000_000 | 1_000_000_000 |
+| Registry (AgentRegistryService) | `"Registry"` | 500_000_000 | 1_000_000_000 |
 
 ---
 
@@ -148,7 +152,7 @@ Off-chain price-feeder agent (TypeScript)
           |
           +---> OracleService (TWAP + FeedStatus)
           +---> ReputationService (interaction log + score)
-          +---> AgentRegistryService (capability index)
+          +---> Registry/AgentRegistryService (capability index)
                        |
                        v
           Any Vara agent calls any service
@@ -192,7 +196,7 @@ varacore/
   src/
     oracle.rs       # OracleService — price feed, TWAP, FeedStatus
     reputation.rs   # ReputationService — interaction log, composite score
-    registry.rs     # AgentRegistryService — capability index, discovery
+    registry.rs     # Registry (AgentRegistryService) — capability index, discovery
     lib.rs          # Program entry + service wiring
   varacore.idl      # Canonical SCALE interface (IDL)
   SKILL.md          # Hub Catalog skill document (integration reference)

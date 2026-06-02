@@ -9,7 +9,7 @@ use core::cell::RefCell;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use alloc::format;
-use parity_scale_codec::{Encode, Decode, Compact};
+use parity_scale_codec::{Encode, Decode};
 use sails_rs::prelude::*;
 use gstd::{msg, ActorId, prelude::*};
 
@@ -26,6 +26,27 @@ struct ReputationDataReply {
     score: u32,
 }
 
+/// Mirror of varacore::registry::ServiceType for SCALE decode only.
+#[derive(Decode)]
+#[allow(dead_code)]
+enum ServiceTypeReply { Oracle, Reputation, Registry, DeFi, Social, Agent, Other }
+
+/// Mirror of varacore::registry::AgentListing for SCALE decode only.
+/// Field order must exactly match AgentListing in registry.rs.
+#[derive(Decode)]
+#[allow(dead_code)]
+struct AgentListingReply {
+    agent_id: ActorId,
+    hub_handle: String,
+    capabilities: Vec<String>,
+    service_type: ServiceTypeReply,
+    description: String,
+    endpoint_hint: String,
+    registered_at_block: u32,
+    last_heartbeat_block: u32,
+    is_active: bool,
+}
+
 // ─────────────── State ───────────────
 
 pub struct AgentConsumerState {
@@ -33,6 +54,7 @@ pub struct AgentConsumerState {
     pub varacore_program_id: Option<ActorId>,
     pub last_score: u32,
     pub last_discovery_count: u32,
+    pub last_hub_handle: String,
 }
 
 impl AgentConsumerState {
@@ -42,6 +64,7 @@ impl AgentConsumerState {
             varacore_program_id: None,
             last_score: 0,
             last_discovery_count: 0,
+            last_hub_handle: String::new(),
         }
     }
 }
@@ -80,6 +103,11 @@ impl AgentConsumerService<'_> {
         self.state.borrow().last_discovery_count
     }
 
+    #[export]
+    pub fn get_cached_hub_handle(&self) -> String {
+        self.state.borrow().last_hub_handle.clone()
+    }
+
     /// Cross-program call to ReputationService.ScoreAgent.
     #[export]
     pub async fn check_agent_trust(&mut self, agent_id: ActorId) -> Result<u32, String> {
@@ -104,6 +132,13 @@ impl AgentConsumerService<'_> {
 
         match <Result<ReputationDataReply, String>>::decode(&mut &reply_bytes[PREFIX..]) {
             Ok(Ok(data)) => {
+                const MIN_TRUST_SCORE: u32 = 400;
+                if data.score < MIN_TRUST_SCORE {
+                    return Err(format!(
+                        "Counterparty score {} is below minimum threshold {} — untrusted",
+                        data.score, MIN_TRUST_SCORE
+                    ));
+                }
                 self.state.borrow_mut().last_score = data.score;
                 Ok(data.score)
             }
@@ -135,11 +170,24 @@ impl AgentConsumerService<'_> {
             return Err("reply too short".to_string());
         }
 
-        let count = <Compact<u32>>::decode(&mut &reply_bytes[PREFIX..])
-            .map(|c| c.0)
-            .unwrap_or(0);
+        let listings = <Vec<AgentListingReply>>::decode(&mut &reply_bytes[PREFIX..])
+            .map_err(|_| "failed to decode agent listings from reply".to_string())?;
+
+        let count = listings.len() as u32;
+
+        // AC-AMBIG FIX: return Err when no agents found so callers get a clear failure signal.
+        // Previously Ok(0) was ambiguous — callers couldn't distinguish "none found" from success.
+        if count == 0 {
+            return Err("no oracle agents found with 'price-feed' capability".to_string());
+        }
 
         self.state.borrow_mut().last_discovery_count = count;
+
+        // Store hub_handle of first agent so callers can identify which oracle was found
+        if let Some(first) = listings.into_iter().next() {
+            self.state.borrow_mut().last_hub_handle = first.hub_handle;
+        }
+
         Ok(count)
     }
 }

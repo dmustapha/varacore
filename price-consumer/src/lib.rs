@@ -38,6 +38,11 @@ pub struct PriceConsumerState {
     pub oracle_program_id: Option<ActorId>,
     pub last_price: u128,
     pub last_asset: String,
+    /// PC-CACHE FIX: unix timestamp (seconds) of the price data from the oracle.
+    pub last_timestamp: u64,
+    /// PC-STALE FIX: human-readable freshness status of the last fetched price.
+    /// Values: "Fresh", "Stale", "Degraded", or "" if never fetched.
+    pub last_status: String,
 }
 
 impl PriceConsumerState {
@@ -47,6 +52,8 @@ impl PriceConsumerState {
             oracle_program_id: None,
             last_price: 0,
             last_asset: String::new(),
+            last_timestamp: 0,
+            last_status: String::new(),
         }
     }
 }
@@ -74,6 +81,21 @@ impl PriceConsumerService<'_> {
     pub fn get_cached_price(&self) -> (String, u128) {
         let s = self.state.borrow();
         (s.last_asset.clone(), s.last_price)
+    }
+
+    /// PC-CACHE FIX: returns the unix timestamp (seconds) of the last fetched price.
+    /// Callers can compare against current time to detect staleness of the cached value.
+    #[export]
+    pub fn get_cached_timestamp(&self) -> u64 {
+        self.state.borrow().last_timestamp
+    }
+
+    /// PC-STALE FIX: returns the feed status of the last fetched price as a string.
+    /// Values: "Fresh" | "Stale" | "Degraded" | "" (never fetched).
+    /// Callers should treat "Stale" as a warning — data is old but structurally valid.
+    #[export]
+    pub fn get_cached_status(&self) -> String {
+        self.state.borrow().last_status.clone()
     }
 
     /// Sets the VaraCore program ID. Only the deployer (owner) can call this.
@@ -116,8 +138,26 @@ impl PriceConsumerService<'_> {
 
         match <Result<OracleDataReply, String>>::decode(&mut &reply_bytes[PREFIX..]) {
             Ok(Ok(data)) => {
-                self.state.borrow_mut().last_price = data.price;
-                self.state.borrow_mut().last_asset = asset;
+                if matches!(data.status, FeedStatus::Degraded) {
+                    return Err(format!(
+                        "Oracle price for {} is degraded (single source only) — refusing unreliable data",
+                        asset
+                    ));
+                }
+                // PC-STALE FIX: record status so callers can inspect via get_cached_status().
+                // PC-CACHE FIX: record oracle timestamp so callers can assess cache age.
+                let status_str = match data.status {
+                    FeedStatus::Fresh    => "Fresh",
+                    FeedStatus::Stale    => "Stale",
+                    FeedStatus::Degraded => "Degraded",
+                };
+                {
+                    let mut s = self.state.borrow_mut();
+                    s.last_price     = data.price;
+                    s.last_asset     = asset;
+                    s.last_timestamp = data.timestamp;
+                    s.last_status    = status_str.into();
+                }
                 Ok(data.price)
             }
             Ok(Err(e)) => Err(e),

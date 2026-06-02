@@ -132,24 +132,35 @@ impl OracleService<'_> {
     // ── Queries (read-only, &self) ──
 
     /// Returns the latest price data for the requested asset.
+    /// O-1: Status is overridden to Stale at query time if price is older than 600s and not Degraded.
     #[export]
     pub fn get_price(&self, asset: String) -> Result<OracleData, String> {
         let state = self.state.borrow();
-        state.prices
+        let mut data = state.prices
             .get(&asset)
             .cloned()
-            .ok_or_else(|| format!("asset '{}' not registered or not yet updated", asset))
+            .ok_or_else(|| format!("asset '{}' not registered or not yet updated", asset))?;
+        if data.status != FeedStatus::Degraded && state.is_stale_at_block(&asset, 600) {
+            data.status = FeedStatus::Stale;
+        }
+        Ok(data)
     }
 
     /// Returns price data for multiple assets.
+    /// Applies the same O-1 stale override as get_price: status overridden to Stale if
+    /// price is older than 600s and not Degraded.
     #[export]
     pub fn get_multiple_prices(&self, assets: Vec<String>) -> Vec<Result<OracleData, String>> {
         let state = self.state.borrow();
         assets.into_iter().map(|asset| {
-            state.prices
+            let mut data = state.prices
                 .get(&asset)
                 .cloned()
-                .ok_or_else(|| format!("asset '{}' not found", asset))
+                .ok_or_else(|| format!("asset '{}' not found", asset))?;
+            if data.status != FeedStatus::Degraded && state.is_stale_at_block(&asset, 600) {
+                data.status = FeedStatus::Stale;
+            }
+            Ok(data)
         }).collect()
     }
 
@@ -157,6 +168,13 @@ impl OracleService<'_> {
     #[export]
     pub fn get_supported_assets(&self) -> Vec<String> {
         OracleState::supported_assets()
+    }
+
+    /// O-4: Returns the SMA of the 8-slot TWAP ring buffer. None if the asset has no history.
+    #[export]
+    pub fn get_twap(&self, asset: String) -> Option<u128> {
+        let state = self.state.borrow();
+        state.twap_rings.get(&asset).map(|ring| ring.twap())
     }
 
     /// Returns true if the price for the given asset is older than max_age_seconds.
@@ -184,6 +202,16 @@ impl OracleService<'_> {
         }
         if price == 0 {
             return Err("price must be non-zero".to_string());
+        }
+        // O-7: Reject absurd prices — > $10B per unit in 8-decimal fixed-point
+        const MAX_PRICE: u128 = 1_000_000_000_000_000_000; // 1e18
+        if price > MAX_PRICE {
+            return Err("price exceeds sanity bound".to_string());
+        }
+        // O-6: Reject timestamps more than 60 seconds in the future
+        let current_approx_ts = exec::block_timestamp() / 1000; // ms → s
+        if timestamp > current_approx_ts.saturating_add(60) {
+            return Err("timestamp too far in future".to_string());
         }
         let status = match source_count {
             0 => return Err("source_count must be >= 1".to_string()),

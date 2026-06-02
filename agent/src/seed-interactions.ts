@@ -2,9 +2,10 @@
 // Pre-seeds ReputationService with synthetic interaction history before demo.
 // Run against mainnet: VARA_ENDPOINT=wss://rpc.vara.network VARACORE_PROGRAM_ID=$MAINNET_ID npx ts-node src/seed-interactions.ts
 import 'dotenv/config';
+import { readFileSync } from 'fs';
 import { GearApi, GearKeyring } from '@gear-js/api';
 
-const VARA_ENDPOINT = process.env.VARA_ENDPOINT || 'wss://rpc.vara-network.io';
+const VARA_ENDPOINT = process.env.VARA_ENDPOINT || 'wss://rpc.vara.network';
 const VARACORE_PROGRAM_ID = process.env.VARACORE_PROGRAM_ID!;
 const MNEMONIC = process.env.PRICE_AGENT_MNEMONIC!;
 
@@ -98,7 +99,12 @@ function buildRecordInteractionPayload(
 
 async function main() {
   const api = await GearApi.create({ providerAddress: VARA_ENDPOINT });
-  const account = await GearKeyring.fromMnemonic(MNEMONIC);
+  // SEED-KEY FIX: support keystore JSON file path in MNEMONIC env var.
+  // price-agent.ts has this check; seed-interactions.ts previously called
+  // fromMnemonic unconditionally, throwing when PRICE_AGENT_MNEMONIC is a file path.
+  const account = MNEMONIC.startsWith('/')
+    ? GearKeyring.fromJson(JSON.parse(readFileSync(MNEMONIC, 'utf8')), undefined)
+    : await GearKeyring.fromMnemonic(MNEMONIC);
 
   console.log('[seed-interactions] Starting...');
 

@@ -57,6 +57,7 @@ pub struct AgentListing {
     pub capabilities: Vec<String>,
     pub service_type: ServiceType,
     pub description: String,
+    pub endpoint_hint: String,
     pub registered_at_block: u32,
     pub last_heartbeat_block: u32,
     pub is_active: bool,
@@ -137,8 +138,14 @@ impl AgentRegistryService<'_> {
     #[export]
     pub fn get_agent(&self, agent_id: ActorId) -> Result<AgentListing, String> {
         let state = self.state.borrow();
+        let current_block = exec::block_height();
+        // Reg-E: recompute is_active at query time (stored value reflects last heartbeat call only)
         state.agents.get(&agent_id)
             .cloned()
+            .map(|mut listing| {
+                listing.is_active = RegistryState::is_active(&listing, current_block);
+                listing
+            })
             .ok_or_else(|| format!("agent {:?} not found in registry", agent_id))
     }
 
@@ -154,6 +161,8 @@ impl AgentRegistryService<'_> {
                     listing.is_active = RegistryState::is_active(&listing, current_block);
                     listing
                 })
+                // Reg-1: filter inactive agents (consistent with discover_agents active_only)
+                .filter(|listing| listing.is_active)
                 .collect(),
         }
     }
@@ -162,27 +171,51 @@ impl AgentRegistryService<'_> {
     pub fn register_agent(&mut self, registration: AgentRegistration) -> Result<(), String> {
         let agent_id = msg::source();
         let current_block = exec::block_height();
+
+        // Reg-LEN: enforce length limits to prevent megabyte-per-entry storage abuse.
         if registration.hub_handle.is_empty() {
             return Err("hub_handle must not be empty".to_string());
+        }
+        if registration.hub_handle.chars().count() > 64 {
+            return Err("hub_handle must be 64 characters or fewer".to_string());
+        }
+        if registration.endpoint_hint.chars().count() > 256 {
+            return Err("endpoint_hint must be 256 characters or fewer".to_string());
+        }
+        // Reg-SILENT: reject long descriptions explicitly instead of silently truncating.
+        if registration.description.chars().count() > 512 {
+            return Err("description must be 512 characters or fewer".to_string());
         }
         if registration.capabilities.len() > 20 {
             return Err("max 20 capabilities allowed".to_string());
         }
+
+        let mut state = self.state.borrow_mut();
+
+        // Reg-UNIQUE: no two different agents may share a hub_handle.
+        // Linear scan is O(n) but acceptable at current registry scale.
+        let handle_taken = state.agents.values()
+            .any(|l| l.hub_handle == registration.hub_handle && l.agent_id != agent_id);
+        if handle_taken {
+            return Err(format!("hub_handle '{}' is already taken by another agent", registration.hub_handle));
+        }
+
+        if let Some(old) = state.agents.get(&agent_id) {
+            let old_caps = old.capabilities.clone();
+            state.deindex_agent_capabilities(&agent_id, &old_caps);
+        }
+
         let listing = AgentListing {
             agent_id,
             hub_handle: registration.hub_handle,
             capabilities: registration.capabilities.clone(),
             service_type: registration.service_type,
-            description: registration.description.chars().take(512).collect(),
+            description: registration.description,
+            endpoint_hint: registration.endpoint_hint,
             registered_at_block: current_block,
             last_heartbeat_block: current_block,
             is_active: true,
         };
-        let mut state = self.state.borrow_mut();
-        if let Some(old) = state.agents.get(&agent_id) {
-            let old_caps = old.capabilities.clone();
-            state.deindex_agent_capabilities(&agent_id, &old_caps);
-        }
         state.agents.insert(agent_id, listing);
         state.index_agent_capabilities(agent_id, &registration.capabilities);
         Ok(())
@@ -195,23 +228,59 @@ impl AgentRegistryService<'_> {
             return Err("only the agent itself can update its listing".to_string());
         }
         let mut state = self.state.borrow_mut();
-        let listing = state.agents.get_mut(&agent_id)
-            .ok_or_else(|| "agent not registered".to_string())?;
-        if let Some(handle) = update.hub_handle {
-            listing.hub_handle = handle;
+
+        // Verify agent is registered before any borrow of its fields.
+        if !state.agents.contains_key(&agent_id) {
+            return Err("agent not registered".to_string());
         }
-        if let Some(desc) = update.description {
-            listing.description = desc.chars().take(512).collect();
+
+        // ── Validation phase (no mutations yet; borrow state immutably) ──
+
+        // Reg-LEN + Reg-UNIQUE: validate new hub_handle before mutating.
+        if let Some(ref handle) = update.hub_handle {
+            if handle.chars().count() > 64 {
+                return Err("hub_handle must be 64 characters or fewer".to_string());
+            }
+            let handle_taken = state.agents.values()
+                .any(|l| l.hub_handle == *handle && l.agent_id != agent_id);
+            if handle_taken {
+                return Err(format!("hub_handle '{}' is already taken by another agent", handle));
+            }
         }
-        if let Some(caps) = update.capabilities {
+        // Reg-SILENT: reject long description explicitly.
+        if let Some(ref desc) = update.description {
+            if desc.chars().count() > 512 {
+                return Err("description must be 512 characters or fewer".to_string());
+            }
+        }
+        // Reg-LEN: validate endpoint_hint length.
+        if let Some(ref hint) = update.endpoint_hint {
+            if hint.chars().count() > 256 {
+                return Err("endpoint_hint must be 256 characters or fewer".to_string());
+            }
+        }
+        if let Some(ref caps) = update.capabilities {
             if caps.len() > 20 {
                 return Err("max 20 capabilities allowed".to_string());
             }
-            let old_caps = listing.capabilities.clone();
+        }
+
+        // ── Mutation phase (validation passed; each get_mut borrow is short-lived) ──
+
+        if let Some(handle) = update.hub_handle {
+            state.agents.get_mut(&agent_id).unwrap().hub_handle = handle;
+        }
+        if let Some(desc) = update.description {
+            state.agents.get_mut(&agent_id).unwrap().description = desc;
+        }
+        // Reg-C: apply endpoint_hint update
+        if let Some(hint) = update.endpoint_hint {
+            state.agents.get_mut(&agent_id).unwrap().endpoint_hint = hint;
+        }
+        if let Some(caps) = update.capabilities {
+            let old_caps = state.agents.get(&agent_id).unwrap().capabilities.clone();
             state.deindex_agent_capabilities(&agent_id, &old_caps);
-            state.agents.get_mut(&agent_id)
-                .ok_or_else(|| "agent disappeared during update".to_string())?
-                .capabilities = caps.clone();
+            state.agents.get_mut(&agent_id).unwrap().capabilities = caps.clone();
             state.index_agent_capabilities(agent_id, &caps);
         }
         Ok(())
@@ -263,6 +332,7 @@ mod unit_tests {
             capabilities: Vec::new(),
             service_type: ServiceType::Other,
             description: String::new(),
+            endpoint_hint: String::new(),
             registered_at_block: 0,
             last_heartbeat_block,
             is_active: true,
