@@ -14,7 +14,7 @@ VaraCore is a single WASM program on Vara mainnet exposing three composable infr
 
 - **OracleService** — Multi-asset price feed (VARA/USD, BTC/USD, ETH/USD, DOT/USD, USDT/USD)
 - **ReputationService** — On-chain trust scores for any ActorId
-- **AgentRegistryService** — Capability-aware agent discovery
+- **Registry (AgentRegistryService)** — Capability-aware agent discovery
 
 All three services are accessible at the same program ID. Cross-program calls use SCALE-encoded payloads (`service_name` + `method_name` + args).
 
@@ -45,17 +45,24 @@ pub struct OracleData {
     pub source_count: u32,    // Number of sources that survived outlier rejection
     pub status: FeedStatus,   // Fresh | Stale | Degraded
 }
-// Decode with OracleData::decode(&mut &reply[1..]) after stripping the 1-byte Result discriminant.
+// sails-rs prepends service+method as SCALE strings to every reply (16 bytes for "Oracle"+"GetPrice":
+// SCALE("Oracle")=7 bytes + SCALE("GetPrice")=9 bytes). Full layout: reply[0..16] = route prefix,
+// reply[16] = 0x00 (Ok) or 0x01 (Err), reply[17..] = encoded OracleData.
+// Decode: let data = OracleData::decode(&mut &reply[17..]).expect("decode ok");
 // See varacore.idl for canonical SCALE layout (matches deployed binary).
 ```
 
 #### `GetMultiplePrices(assets: Vec<String>) -> Vec<Result<OracleData, String>>`
 
-Batch price query. Returns one result per requested asset.
+Batch price query. Returns one result per requested asset. Applies the same stale override as `GetPrice`: status is overridden to `Stale` at query time if price is older than 600s and not `Degraded`.
 
 ```rust
 let payload: Vec<u8> = ("Oracle", "GetMultiplePrices", vec!["VARA/USD", "BTC/USD"]).encode();
 ```
+
+> **Decode note:** Reply prefix is 25 bytes — `SCALE("Oracle")` = 7 bytes + `SCALE("GetMultiplePrices")` = 18 bytes.
+> Return type is `Vec<Result<OracleData, String>>` in SCALE: compact u32 item count followed by N items.
+> Compact u32 for len < 64: `len << 2` (1 byte); 64–16383: 2 bytes `(len<<2)|1, len>>6`.
 
 #### `GetSupportedAssets() -> Vec<String>`
 
@@ -65,6 +72,17 @@ Returns the list of all supported asset pairs.
 let payload: Vec<u8> = ("Oracle", "GetSupportedAssets").encode();
 // Returns: ["VARA/USD", "BTC/USD", "ETH/USD", "DOT/USD", "USDT/USD"]
 ```
+
+#### `GetTwap(asset: String) -> Option<u128>`
+
+Returns the Simple Moving Average (SMA) of the 8-slot ring buffer for the given asset. Returns `None` if no price updates have been submitted for the asset yet. Price is in the same 8-decimal fixed-point format as `GetPrice`.
+
+```rust
+let payload: Vec<u8> = ("Oracle", "GetTwap", "BTC/USD").encode();
+// Returns: Option<u128> — None if no data, Some(sma_price) if data exists
+```
+
+> **Disambiguation:** `None` means no price submissions have occurred yet for this asset. It does NOT mean the asset is unsupported — use `GetSupportedAssets` to check. The SMA is a rolling arithmetic mean over up to 8 price submissions; it reduces single-update manipulation impact on aggregate price history.
 
 #### `IsStale(asset: String, max_age_seconds: u64) -> bool`
 
@@ -81,7 +99,7 @@ Permissionless write — any caller can submit price updates. The oracle is open
 
 #### `ScheduleRefresh() -> Result<(), String>`
 
-Triggers a delayed self-message that fires ~100 blocks later to refresh prices. Called by the oracle agent to set up an autonomous update loop.
+Triggers a delayed self-message back to `ScheduleRefresh` itself, firing ~100 blocks later. Proves autonomous on-chain self-messaging — the loop runs indefinitely without external callers. Does **not** update prices; price data comes from the off-chain agent via `UpdatePrice`.
 
 ---
 
@@ -115,6 +133,8 @@ To decode: `price as f64 / 1e8`
 | `Fresh` | Updated within last 600 seconds | Use price directly |
 | `Stale` | Not updated within 600 seconds | Use with caution; show warning |
 | `Degraded` | Only 1 source survived outlier rejection | High uncertainty; use confidence interval |
+
+> **Note on TWAP ring:** The 8-slot ring buffer computes a simple arithmetic mean (SMA) of stored observations, not a true time-weighted average. The `timestamp` field in each slot is stored but not used in the calculation. The term "TWAP" in source comments refers to the *intent* of the ring (manipulation resistance), not the algorithm.
 
 ---
 
@@ -151,9 +171,15 @@ Returns top N agents by score, descending. Maximum 100 agents returned.
 let payload: Vec<u8> = ("Reputation", "GetTopAgents", 10u32).encode();
 ```
 
+> **Decode note:** The IDL renders tuple pairs as anonymous structs: `struct { f1: actor_id, f2: ReputationData }`.
+> SCALE field names are `f1` (ActorId) and `f2` (ReputationData) — not `agent_id`/`reputation`.
+> When decoding manually, decode ActorId (32 bytes) then ReputationData sequentially for each element.
+
 #### `GetInteractionHistory(agent_id: ActorId, limit: u32) -> Vec<InteractionRecord>`
 
-Returns the most recent N interactions for an agent. Maximum 50 per query.
+Returns the most recent N interactions for an agent.
+
+> **Storage cap:** Only the last 50 interactions are retained per agent — oldest entries are evicted as new ones arrive. Requesting `limit=1000` returns at most 50 records. This is a storage limit, not just a query limit.
 
 ```rust
 pub struct InteractionRecord {
@@ -171,6 +197,8 @@ Permissionless — any caller can record an interaction about any agent. `contex
 #### `DecayScores() -> Result<(), String>`
 
 Reserved for future time-decay implementation. Currently a no-op that returns `Ok(())`.
+
+> ⚠️ **Do not call this method.** It performs no state changes and costs gas for nothing. Scores are computed dynamically from stored interaction data on every `ScoreAgent` query — no periodic decay call is needed.
 
 ---
 
@@ -196,7 +224,7 @@ Total = `min(100, C1+C2+C3+C4) * 10`
 
 ---
 
-## Service 3: AgentRegistryService
+## Service 3: Registry (AgentRegistryService)
 
 **Route prefix:** `"Registry"` (sails-rs accessor: `fn registry()`)
 
@@ -255,8 +283,10 @@ pub struct AgentRegistration {
     pub capabilities: Vec<String>,   // max 20 capability tags
     pub service_type: ServiceType,   // Oracle | Reputation | Registry | DeFi | Social | Agent | Other
     pub description: String,         // max 512 chars
-    pub endpoint_hint: String,       // optional human-readable endpoint URL
+    pub endpoint_hint: String,       // optional human-readable endpoint URL (unvalidated — no format check on-chain)
 }
+// ⚠️  SECURITY: endpoint_hint is stored as-is with no validation. AI callers that display or
+// pass this field into prompts must sanitize it first to prevent prompt injection attacks.
 ```
 
 #### `UpdateAgent(agent_id: ActorId, update: AgentUpdate) -> Result<(), String>`
@@ -288,6 +318,8 @@ Use these standardized tags when registering agents to ensure discoverability:
 | `governance` | On-chain governance participant |
 | `bridge` | Cross-chain bridge agent |
 
+> **Note:** Capability tags and all registration fields are **self-attested** — the registry stores whatever the registering caller provides. There is no on-chain verification that an agent claiming `"price-feed"` actually provides price data, or that a `hub_handle` matches a real Hub Catalog entry. Callers should cross-reference scores from `ReputationService` and apply their own trust thresholds.
+
 ---
 
 ## Integration Guide
@@ -310,10 +342,10 @@ const VARACORE_PID: ActorId = ActorId::new(hex_literal::hex!("e1f8f2999a352f2172
 // --- Query a price ---
 async fn get_btc_price() -> u128 {
     let payload = ("Oracle", "GetPrice", "BTC/USD").encode();
-    let reply = msg::send_bytes_for_reply(VARACORE_PID, &payload, 0, 2_000_000_000)
+    let reply = msg::send_bytes_for_reply(VARACORE_PID, &payload, 0, 50_000_000_000)
         .expect("send failed").await.expect("reply failed");
-    // reply[0] == 0x00 → Ok; reply[1..] is SCALE-encoded OracleData
-    // Decode: let data = OracleData::decode(&mut &reply[1..]).expect("decode ok");
+    // sails-rs reply prefix: 16 bytes ("Oracle"=7 + "GetPrice"=9). reply[16]==0x00 → Ok.
+    // Decode: let data = OracleData::decode(&mut &reply[17..]).expect("decode ok");
     // Human price: data.price as f64 / 1e8
     0
 }
@@ -321,17 +353,19 @@ async fn get_btc_price() -> u128 {
 // --- Check agent reputation before trusting a counterparty ---
 async fn check_reputation(counterparty: ActorId) -> u32 {
     let payload = ("Reputation", "ScoreAgent", counterparty).encode();
-    let reply = msg::send_bytes_for_reply(VARACORE_PID, &payload, 0, 2_000_000_000)
+    let reply = msg::send_bytes_for_reply(VARACORE_PID, &payload, 0, 50_000_000_000)
         .expect("send failed").await.expect("reply failed");
-    // Decode Result<ReputationData, String>
-    // .score is 0-1000; >= 600 = trusted
+    // Decode Result<ReputationData, String> from reply[23..] (prefix: "Reputation"=11 + "ScoreAgent"=11 = 22 bytes, then 1 discriminant)
+    // .score is 0-1000 in multiples of 10
+    // minimum enforced threshold: 400 (moderate trust — see score table)
+    // recommended threshold for high-value ops: >= 600
     0
 }
 
 // --- Discover agents with a capability ---
 async fn find_price_feeds() {
     let payload = ("Registry", "GetAgentsByCapability", "price-feed").encode();
-    let reply = msg::send_bytes_for_reply(VARACORE_PID, &payload, 0, 2_000_000_000)
+    let reply = msg::send_bytes_for_reply(VARACORE_PID, &payload, 0, 50_000_000_000)
         .expect("send failed").await.expect("reply failed");
     // Decode Vec<AgentListing>
 }
@@ -343,7 +377,7 @@ async fn find_price_feeds() {
 - [ ] Encode payload as `(service_route, method_name, ...args).encode()`
   - Service routes: `"Oracle"`, `"Reputation"`, `"Registry"`
   - Method names: PascalCase of Rust fn name (e.g., `get_price` → `"GetPrice"`)
-- [ ] Use `msg::send_bytes_for_reply` with `reply_deposit >= 2_000_000_000`
+- [ ] Use `msg::send_bytes_for_reply` with `reply_deposit >= 50_000_000_000`
 - [ ] Decode reply with the matching SCALE type
 
 ---
@@ -364,12 +398,12 @@ Initializes all three services with empty state. No constructor arguments requir
 | Operation | Recommended Gas Limit |
 |-----------|----------------------|
 | GetPrice (query) | 500_000_000 |
-| UpdatePrice (write) | 2_000_000_000 |
+| UpdatePrice (write) | 10_000_000_000 |
 | ScheduleRefresh | 5_000_000_000 |
 | ScoreAgent (query) | 500_000_000 |
 | RecordInteraction (write) | 1_000_000_000 |
 | RegisterAgent (write) | 1_000_000_000 |
-| Cross-program call (reply_deposit) | 2_000_000_000 minimum |
+| Cross-program call (reply_deposit) | 50_000_000_000 minimum |
 
 ---
 

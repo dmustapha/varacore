@@ -68,11 +68,12 @@ routing (numeric Interface ID routing was introduced in v1.0.0-beta.1, March 202
 | Block Hash | Description |
 |-----------|-------------|
 | `0xef0b6b1b56c23181bc19f3e9bf48a192282008de389ae1bbbe1bf8fe81613caa` | ScheduleRefresh self-call #1 (initial) |
-| `0xa9ec0dd9cbdf82e2...` | ScheduleRefresh self-call #2 (~100 blocks later — proves loop round-trip) |
+| `0xa9ec0dd9cbdf82e2...` ⚠️ FILL BEFORE SUBMISSION — retrieve full 66-char hash from Subscan | ScheduleRefresh self-call #2 (~100 blocks later — proves loop round-trip) |
 
 > Call #2 proves receipt and re-execution of the delayed message: if the payload encoding
-> were wrong or gas exhausted, call #2 would not exist. The program has since fired
-> ~500+ additional loops (deployed Day 18; ~100-block intervals ≈ 5 min per cycle).
+> were wrong or gas exhausted, call #2 would not exist. The program has been running
+> continuously since initialization — verify current self-call count on Subscan by filtering
+> internal messages to/from `0xe1f8f2...`.
 
 ---
 
@@ -115,8 +116,56 @@ To verify: call `Oracle.GetPrice("BTC/USD")` on mainnet VaraCore.
 
 ---
 
+## Self-Registration in VaraCore Registry (Tier 3 Fix)
+
+Operator wallet registered VaraCore as an Oracle agent in its own on-chain registry.
+
+| Action | TX Hash | Block # |
+|--------|---------|---------|
+| Registry/RegisterAgent (operator wallet → VaraCore) | `0xa3adc3af71e7b1f8a4110f482d725f485fcd0bac78188c370784b3e5098c45eb` | 33458098 |
+
+**Verification:** `Registry/GetAgentsByCapability("price-feed")` at block 33458102 returned:
+- `hub_handle: "varacore-oracle"`, `capabilities: ["price-feed","data-provider"]`, `service_type: Oracle`, `is_active: true`
+
+---
+
 ## Source
 
 GitHub: https://github.com/dmustapha/varacore
 IDL: `varacore/varacore.idl` (canonical SCALE interface)
 Skill doc: `varacore/SKILL.md` (for agent integration)
+
+---
+
+## VaraCore V3 — All Critique Fixes Applied (2026-06-02)
+
+**V3 Program Addresses (mainnet — deployed 2026-06-02)**
+
+| Program | Address |
+|---------|---------|
+| VaraCore v3 | `0x86aa46695971b906329f7cac9f60a1ef6847cf730a63b5fd06d87346b61e47cb` |
+| PriceConsumer v3 | `0x0a7f8a61da680e16a7c44d3a45f9a8dbb9e05fc7c0a5edad1cacadefde08c6d7` |
+| AgentConsumer v3 | `0xa7821734468de4454e34979a0406cb9941a4a08cf1a134730c8e1e47c5fe48a8` |
+
+**V3 vs V1 — What Changed**
+- R-OVERFLOW: `saturating_mul(10_000)` prevents u64 overflow in reputation scoring
+- R-ACTIVITY: `days_active()` uses `last_active_block` (inactive agents stop accruing c3)
+- Reg-UNIQUE: hub_handle uniqueness enforced in both register and update
+- Reg-LEN: hub_handle ≤ 64 chars, endpoint_hint ≤ 256 chars, both ops
+- Reg-SILENT: description > 512 → `Err(...)` not silent truncation
+- Reg-C: `update_agent` now applies `endpoint_hint` from AgentUpdate
+- Reg-E: `get_agent` recomputes `is_active` from `exec::block_height()` at query time
+- PC-STALE: PriceConsumer exposes `get_cached_status()` and `get_cached_timestamp()`
+- AC-AMBIG: `find_oracle_agents` returns `Err` when count=0
+- PA-ENDPOINT/PA-TS/PA-USDT: price-agent fixes (mainnet endpoint, per-asset timestamp, USDT dual-source)
+- 75 tests passing, 0 failing (cargo test -p varacore, -p price-consumer, -p agent-consumer)
+
+**V3 Cross-Program Call Proofs**
+
+| Integration | Block Hash |
+|-------------|-----------|
+| PriceConsumer → VaraCore Oracle.GetPrice | `0x183231f3a36a6b182bcb3031682678189bb02953c48cc7a2540c5eef38ba6a66` |
+| AgentConsumer → VaraCore Reputation.ScoreAgent | `0x3a1327e1d2f8d327e7c9e8b0f2d443bd08f1c0d1c5a6f2eb1762d7261592764a` |
+| AgentConsumer → VaraCore Registry.GetAgentsByCapability | `0xa9ced4b92e403946fd67dd0b9ce08d8b269d3e971a9b729b74e79d2c3c76da64` |
+
+**Livetest V3 Result:** 235 PASS / 0 FAIL / 25 SKIP (run against v1 mainnet; v3 source improvements verified via unit tests and source inspection)

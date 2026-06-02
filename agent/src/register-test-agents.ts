@@ -1,43 +1,39 @@
 // File: agent/src/register-test-agents.ts
-// Pre-registers demo agents in AgentRegistryService before demo.
-// Run against mainnet: VARA_ENDPOINT=wss://rpc.vara.network VARACORE_PROGRAM_ID=$MAINNET_ID npx ts-node src/register-test-agents.ts
+// Seeds the Registry with demo agent entries for livetest/demo.
+//
+// ⚠️  IMPORTANT: RegisterAgent always registers msg::source() (the signing wallet),
+// NOT a program ID passed in the payload. All entries below register the OPERATOR WALLET.
+// Call this BEFORE the Tier-3 varacore-oracle self-registration to avoid overwriting it.
+//
+// Run: VARA_ENDPOINT=wss://rpc.vara.network VARACORE_PROGRAM_ID=$MAINNET_ID npx ts-node src/register-test-agents.ts
 import 'dotenv/config';
+import { readFileSync } from 'fs';
 import { GearApi, GearKeyring } from '@gear-js/api';
 
-const VARA_ENDPOINT = process.env.VARA_ENDPOINT || 'wss://rpc.vara-network.io';
+// PA-ENDPOINT FIX: correct mainnet URL. 'wss://rpc.vara-network.io' is testnet.
+const VARA_ENDPOINT = process.env.VARA_ENDPOINT || 'wss://rpc.vara.network';
 const VARACORE_PROGRAM_ID = process.env.VARACORE_PROGRAM_ID!;
 const MNEMONIC = process.env.PRICE_AGENT_MNEMONIC!;
 
+// This registers the operator wallet (msg::source()) in the registry.
+// It seeds a mock DeFi consumer entry so GetAgentsByCapability("price-feed-user")
+// returns a result, demonstrating multi-agent discovery.
 const REGISTRATIONS = [
   {
-    programId: process.env.PRICE_CONSUMER_PROGRAM_ID!,
-    hubHandle: 'price-consumer-demo',
-    capabilities: ['defi-consumer', 'price-feed-user', 'oracle-caller'],
-    serviceType: 'DeFi',
-    description: 'Demonstration program that calls VaraCore OracleService.GetPrice',
-    endpointHint: 'https://agents.vara.network/catalog/price-consumer-demo',
-  },
-  {
-    programId: process.env.AGENT_CONSUMER_PROGRAM_ID!,
-    hubHandle: 'agent-consumer-demo',
-    capabilities: ['reputation-consumer', 'discovery-consumer', 'trust-checker'],
-    serviceType: 'Agent',
-    description: 'Demonstration program that calls VaraCore ReputationService + AgentRegistryService',
-    endpointHint: 'https://agents.vara.network/catalog/agent-consumer-demo',
-  },
-  {
-    programId: '0x' + 'bb'.repeat(32),
     hubHandle: 'mock-defi-vault',
     capabilities: ['lending', 'collateral-management', 'price-feed-user'],
     serviceType: 'DeFi',
-    description: 'Mock DeFi lending vault that consumes oracle prices for collateral valuation',
-    endpointHint: 'N/A (mock agent for demo)',
+    description: 'Mock DeFi lending vault that consumes VaraCore oracle prices for collateral valuation',
+    endpointHint: 'N/A (mock agent for demo purposes)',
   },
 ];
 
 async function main() {
   const api = await GearApi.create({ providerAddress: VARA_ENDPOINT });
-  const account = await GearKeyring.fromMnemonic(MNEMONIC);
+  // SEED-KEY FIX: support keystore JSON file path in MNEMONIC env var.
+  const account = MNEMONIC.startsWith('/')
+    ? GearKeyring.fromJson(JSON.parse(readFileSync(MNEMONIC, 'utf8')), undefined)
+    : await GearKeyring.fromMnemonic(MNEMONIC);
 
   console.log('[register-test-agents] Starting...');
 
@@ -90,7 +86,7 @@ const SERVICE_TYPE_INDEX: Record<string, number> = {
   Oracle: 0, Reputation: 1, Registry: 2, DeFi: 3, Social: 4, Agent: 5, Other: 6,
 };
 
-function buildRegisterAgentPayload(reg: typeof REGISTRATIONS[0]): `0x${string}` {
+function buildRegisterAgentPayload(reg: (typeof REGISTRATIONS)[0]): `0x${string}` {
   // SCALE payload: ("Registry", "RegisterAgent", AgentRegistration)
   // IDL: RegisterAgent(registration: AgentRegistration) -> result(null, str)
   // AgentRegistration = { hub_handle: str, capabilities: vec str, service_type: ServiceType, description: str, endpoint_hint: str }

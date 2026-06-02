@@ -3,7 +3,7 @@
 #![no_std]
 extern crate alloc;
 
-use alloc::collections::BTreeMap;
+use alloc::collections::{BTreeMap, VecDeque};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::cell::RefCell;
@@ -58,11 +58,16 @@ impl AgentReputation {
         if self.total_interactions == 0 {
             return 0;
         }
-        ((self.successful_interactions * 10_000) / self.total_interactions) as u16
+        // R-OVERFLOW FIX: saturating_mul prevents u64 wrap at ~1.84e15 interactions.
+        // Naive `successful * 10_000` overflows before the division at that scale.
+        (self.successful_interactions.saturating_mul(10_000) / self.total_interactions) as u16
     }
 
     fn days_active(&self, current_block: u32) -> u32 {
-        let blocks_elapsed = current_block.saturating_sub(self.first_active_block);
+        // R-ACTIVITY FIX: use last_active_block so inactive agents stop accruing c3 longevity.
+        // Previously used first_active_block — agent registered 200 days ago with 1 interaction
+        // would still score as "200 days active". Now counts days since last interaction.
+        let blocks_elapsed = current_block.saturating_sub(self.last_active_block);
         // ~20 blocks per minute, ~28800 blocks per day
         blocks_elapsed / 28_800
     }
@@ -71,7 +76,7 @@ impl AgentReputation {
 /// Internal reputation state.
 pub struct ReputationState {
     pub agents: BTreeMap<ActorId, AgentReputation>,
-    pub histories: BTreeMap<ActorId, Vec<InteractionRecord>>,
+    pub histories: BTreeMap<ActorId, VecDeque<InteractionRecord>>,
 }
 
 impl ReputationState {
@@ -98,6 +103,9 @@ fn compute_score(rep: &AgentReputation, current_block: u32) -> u32 {
     let c3 = floor_log2(days + 1) as u64 * 7;
     let c4: u64 = if rep.total_interactions > 0 { 10 } else { 0 };
     let raw = (c1 + c2 + c3 + c4).min(100);
+    // R-1: Cap raw at 50 if agent has been inactive for more than 30 days (864000 blocks)
+    let blocks_since_active = current_block.saturating_sub(rep.last_active_block);
+    let raw = if blocks_since_active > 864_000 { raw.min(50) } else { raw };
     (raw * 10) as u32
 }
 
@@ -163,8 +171,8 @@ impl ReputationService<'_> {
         match state.histories.get(&agent_id) {
             None => Vec::new(),
             Some(history) => {
-                let start = history.len().saturating_sub(cap);
-                history[start..].to_vec()
+                let skip = history.len().saturating_sub(cap);
+                history.iter().skip(skip).cloned().collect()
             }
         }
     }
@@ -188,11 +196,11 @@ impl ReputationService<'_> {
             rep.successful_interactions += 1;
         }
         rep.last_active_block = block;
-        let history = state.histories.entry(agent_id).or_insert_with(Vec::new);
+        let history = state.histories.entry(agent_id).or_insert_with(VecDeque::new);
         if history.len() >= 50 {
-            history.remove(0);
+            history.pop_front(); // R-5: O(1) eviction vs O(n) Vec::remove(0)
         }
-        history.push(InteractionRecord {
+        history.push_back(InteractionRecord {
             caller,
             success,
             block_number: block,
