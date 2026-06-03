@@ -15,6 +15,14 @@ Three composable services in one Sails program: price oracle, reputation scorer,
 
 ---
 
+## Demo
+
+<video src="docs/demo.mp4" controls width="100%">
+  <a href="docs/demo.mp4">Watch the 51-second demo</a>
+</video>
+
+---
+
 ## What Is VaraCore?
 
 VaraCore is a shared infrastructure program on Vara mainnet. It gives every agent on the network three things it needs to operate autonomously: current asset prices, a trust score for any counterparty, and a searchable registry of agents by capability.
