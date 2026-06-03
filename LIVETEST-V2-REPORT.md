@@ -2,7 +2,7 @@
 
 **Program:** `0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078`
 **Network:** Vara Mainnet (wss://rpc.vara.network)
-**Tested:** 2026-05-31T13:40:00.062Z → 2026-05-31T14:18:46.756Z
+**Tested:** 2026-06-02T09:56:10.272Z → 2026-06-02T10:28:57.115Z
 **Overall:** PASS
 **Results:** 93 PASS / 0 FAIL / 4 SKIP (unit-verified)
 
@@ -16,7 +16,7 @@
 
 | ID                     | Status | Description                                              | Detail |
 |------------------------|--------|----------------------------------------------------------|--------|
-| V2-RPC                 | PASS | Connect to Vara mainnet                                 | Chain: Vara Network | head: 0x500663b5f80a02... |
+| V2-RPC                 | PASS | Connect to Vara mainnet                                 | Chain: Vara Network | head: 0xfca6119d626928... |
 | V2-WALLET              | PASS | Load operator wallet                                    | Address: kGkprErDnb2oa4j1Skk7hK6Bbgb73ybJReAFsWPF4KpGPfHiQ |
 | V2-S1-01               | PASS | UpdatePrice(BTC/USD, src=1) → Degraded                  | Finalized OK |
 | V2-S1-01Q              | PASS | GetPrice → status=Degraded(2), src_count=1              | status=2(expect 2), src=1 |
@@ -126,9 +126,9 @@ _None_
 
 | Integration | Block Hash |
 |-------------|-----------|
-| PriceConsumer → VaraCore Oracle.GetPrice | `0xfc5d838896a6a3324a80bba6618ebdffa07de1577cb51608bf8dd6a1f6c4478f` |
-| AgentConsumer → VaraCore Reputation.ScoreAgent | `0xb53dab2208d5ec75fde87721512ce3823dc3fbe1312688e2fc8496ab435e8131` |
-| AgentConsumer → VaraCore Registry.GetAgentsByCapability | `0x66624b9c784a8fee663928aa845276b3f7bf10ee16b314cef401051648216ffc` |
+| PriceConsumer → VaraCore Oracle.GetPrice | `0x0a832327c589e82d17312cbfa3205ecd0e35822bbe159e55b2dedcf6247cb677` |
+| AgentConsumer → VaraCore Reputation.ScoreAgent | `0x8917cd8d5f626299d755c4af56ac80707414eb0f153a8c38aed549d6e3898846` |
+| AgentConsumer → VaraCore Registry.GetAgentsByCapability | `0xcd2f2ca1a8c556e4caf07842403dec7b497f4d81ae78b8a68f80d7c6a3986257` |
 
 ---
 

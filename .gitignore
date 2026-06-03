@@ -29,6 +29,8 @@ pipeline-log.md
 *.backup
 
 # Local state
+.livetest-v2-state.json
+.livetest-state.json
 .polish-state.json
 .conductor-state.json
 .debug-state.json

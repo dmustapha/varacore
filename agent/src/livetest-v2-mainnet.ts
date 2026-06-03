@@ -19,8 +19,10 @@ const WALLET_PATH = '/Users/MAC/.vara-wallet/wallets/varacore-operator.json';
 const REPORT_PATH = '/Users/MAC/vara-a2a/LIVETEST-V2-REPORT.md';
 const STATE_PATH  = '/Users/MAC/vara-a2a/.livetest-v2-state.json';
 
-// Fresh agent IDs — byte-repeated, none used in V1 session
-const freshId = (b: number) => '0x' + b.toString(16).padStart(2, '0').repeat(32);
+// Fresh agent IDs — run-specific 2-byte prefix ensures each run uses unique IDs
+// preventing accumulated on-chain state from prior runs from corrupting score assertions.
+const RUN_PREFIX = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+const freshId = (b: number) => '0x' + RUN_PREFIX + b.toString(16).padStart(2, '0').repeat(30);
 // Section 4: 0xA1–0xA6  |  Section 5: 0xA9  |  Section 6: 0xB1–0xB5
 // Section 7: 0xC7       |  Section 8: 0xC8  |  Section 9: 0xD1–0xD3
 // Section 10: uses wallet-registered agents  |  Section 12: 0xE1  |  Sec 13: 0xE2
@@ -952,6 +954,20 @@ async function main() {
   // Section 14: Cross-Program Chain — Exact Values
   // ════════════════════════════════════════════════════════
   console.log('\n── Section 14: Cross-Program Exact Values ──');
+
+  // Top up companion program accounts before cross-program calls.
+  // Each call deducts reply_deposit (50_000_000_000) from the program account.
+  // After previous runs this balance may be depleted — 500_000_000_000 covers 10 calls each.
+  await new Promise<void>((resolve) => {
+    api.tx.balances.transferKeepAlive(PRICE_CON, 500_000_000_000n)
+      .signAndSend(account, ({ status }: any) => { if (status.isFinalized) resolve(); })
+      .catch(() => resolve());
+  });
+  await new Promise<void>((resolve) => {
+    api.tx.balances.transferKeepAlive(AGENT_CON, 500_000_000_000n)
+      .signAndSend(account, ({ status }: any) => { if (status.isFinalized) resolve(); })
+      .catch(() => resolve());
+  });
 
   const exactPrice = 7_540_000_000_000n; // $75,400.00 with 8 decimals
 
