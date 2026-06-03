@@ -346,7 +346,8 @@ fn test_register_agent_too_many_capabilities() {
     );
 }
 
-/// ST-F4-EDGE-09: RegisterAgent description 513 chars → truncated to 512
+/// ST-F4-EDGE-09: RegisterAgent description 513 chars → Err (Reg-SILENT fix: explicit rejection)
+/// Previously silently truncated to 512; now returns Err so callers know the registration failed.
 #[test]
 fn test_register_agent_long_description_truncated() {
     let sys = System::new();
@@ -369,7 +370,8 @@ fn test_register_agent_long_description_truncated() {
         "RegisterAgent(513-char desc) failed. failed={:?}",
         result.failed
     );
-    // GetAgent — should succeed (was registered)
+    // GetAgent — handler processes without panic (returns Err "agent not found" because
+    // registration was rejected, but the message dispatch itself succeeds without a trap).
     let agent_id = agent_actor_id(100);
     let get_payload = ("Registry", "GetAgent", agent_id).encode();
     let msg_id2 = program.send_bytes(42u64, get_payload);

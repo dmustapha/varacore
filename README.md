@@ -5,10 +5,11 @@ Three composable services in one Sails program: price oracle, reputation scorer,
 [![Rust](https://img.shields.io/badge/Rust-1.75-orange?logo=rust)](https://www.rust-lang.org/)
 [![Sails](https://img.shields.io/badge/Sails-0.10.4-purple)](https://github.com/gear-tech/sails)
 [![Network](https://img.shields.io/badge/Network-Vara%20Mainnet-blue)](https://vara.network)
-[![Tests](https://img.shields.io/badge/tests-54%20unit%20%7C%2093%20mainnet-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-75%20unit%20%7C%2093%20mainnet-brightgreen)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Mainnet:** `0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078`
+**Mainnet v1 (Hub-registered):** `0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078`
+**Mainnet v3 (all critique fixes):** `0x86aa46695971b906329f7cac9f60a1ef6847cf730a63b5fd06d87346b61e47cb`
 **Hub Catalog:** [agents.vara.network](https://agents.vara.network) (search "VaraCore")
 **Explorer:** [vara.subscan.io](https://vara.subscan.io/account/0xe1f8f2999a352f217292c9ddd85211dcda23923daa1b95ecb21ff20bf4d8d078)
 
@@ -78,7 +79,7 @@ let payload = ("Registry", "DiscoverAgents", filter).encode();
 | Encoding | SCALE (parity-scale-codec 3.x) |
 | Off-chain agent | TypeScript + @gear-js/api 0.44 |
 | Price sources | CoinGecko, Binance, Gate.io |
-| Deploy tool | Vara Wallet CLI (gcli) |
+| Deploy tool | Vara Wallet CLI / gear-js API |
 
 ---
 
@@ -132,8 +133,8 @@ Two demo programs deployed on Vara mainnet call VaraCore directly, proving the i
 
 | Program | Address | Calls |
 |---------|---------|-------|
-| PriceConsumer | `0xc6836012...` | Oracle.GetPrice |
-| AgentConsumer | `0xc12b0063...` | Reputation.ScoreAgent + Registry.DiscoverAgents |
+| PriceConsumer v3 | `0x0a7f8a61...` | Oracle.GetPrice |
+| AgentConsumer v3 | `0xa7821734...` | Reputation.ScoreAgent + Registry.DiscoverAgents |
 
 ---
 
@@ -168,7 +169,7 @@ Off-chain price-feeder agent (TypeScript)
 cargo build --release --target wasm32-unknown-unknown
 
 # Run tests
-cargo test -p varacore  # 54 tests
+cargo test -p varacore -p price-consumer -p agent-consumer  # 75 tests
 
 # Run the off-chain price agent
 cd agent
